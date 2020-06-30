@@ -10,14 +10,11 @@ import Foundation
 import simd
 import CoreGraphics
 
-print("Hello, World!")
-
 let film = Film(imageWidth: 400, imageHeight: 600)
 
 film.commitColor(atX: 0, atY: 0, color: simd_float3(0.8, 0.6, 0.6))
 
-let url = URL(fileURLWithPath: "./output.png")
-let success = film.saveImage(at: url)
+let success = film.saveImage()
 
 if success {
     print("Image successfully saved!")

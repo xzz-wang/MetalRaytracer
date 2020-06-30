@@ -22,8 +22,9 @@ class Film {
     private var colorBuffer: [RGBData]
     
     
+    
     // Initialization
-    init(imageWidth width: Int, imageHeight height: Int, outputFileName name: String = "output.png") {
+    init(imageWidth width: Int, imageHeight height: Int, outputFileName name: String = "./output.png") {
         self.width = width
         self.height = height
         outputFileName = name
@@ -32,11 +33,20 @@ class Film {
     }
     
     
+    
     // Update the color in the color buffer array
     public func commitColor(atX x: Int, atY y:Int, color: simd_float3) {
+        // Save check the input index
+        if x >= width || x < 0 || y >= height || y < 0 {
+            print("Wrong index passed into commitColor()!")
+            return;
+        }
+        
         let index = x * width + y;
         colorBuffer[index] = RGBData(color: color);
     }
+    
+    
     
     // Convert the data to CGImage
     private func produceCGImage() -> CGImage {
@@ -50,7 +60,6 @@ class Film {
         )!
         
         let bmi = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue);
-
 
         let cgim = CGImage.init(
             width: width,
@@ -66,12 +75,16 @@ class Film {
             shouldInterpolate: false,
             intent: CGColorRenderingIntent.defaultIntent
         )
-        
         return cgim!
-
     }
     
+    
+    
     // Save the image to file
+    public func saveImage() -> Bool {
+        saveImage(at: URL(fileURLWithPath: outputFileName))
+    }
+    
     public func saveImage(at destinationURL: URL) -> Bool {
         let image = produceCGImage()
         
@@ -79,11 +92,12 @@ class Film {
         CGImageDestinationAddImage(destination, image, nil)
         return CGImageDestinationFinalize(destination)
     }
-    
-    
 }
 
 
+/*
+ The Strut used to store 8 bit information of the image
+ */
 struct RGBData {
     var r: UInt8
     var g: UInt8
