@@ -13,13 +13,13 @@ import simd
 
 class Film {
     
-    var width: Int!
-    var height: Int!
+    private var width: Int!
+    private var height: Int!
     
-    var outputFileName: String!
+    private var outputFileName: String!
     
     // Three floats are a pixel, each representing RGB, row first
-    var colorBuffer: [RGBData]
+    private var colorBuffer: [RGBData]
     
     
     // Initialization
@@ -33,13 +33,13 @@ class Film {
     
     
     // Update the color in the color buffer array
-    func commitColor(atX x: Int, atY y:Int, color: simd_float3) {
+    public func commitColor(atX x: Int, atY y:Int, color: simd_float3) {
         let index = x * width + y;
         colorBuffer[index] = RGBData(color: color);
     }
     
     // Convert the data to CGImage
-    func produceCGImage() -> CGImage {
+    private func produceCGImage() -> CGImage {
         
         // 8 Bit RGBA Color Space
         let bitsPerComponent:Int = 8
@@ -72,9 +72,14 @@ class Film {
     }
     
     // Save the image to file
-    func saveImage() {
+    public func saveImage(at destinationURL: URL) -> Bool {
         let image = produceCGImage()
+        
+        guard let destination = CGImageDestinationCreateWithURL(destinationURL as CFURL, kUTTypePNG, 1, nil) else { return false }
+        CGImageDestinationAddImage(destination, image, nil)
+        return CGImageDestinationFinalize(destination)
     }
+    
     
 }
 

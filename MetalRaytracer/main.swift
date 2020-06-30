@@ -12,20 +12,15 @@ import CoreGraphics
 
 print("Hello, World!")
 
-let film = Film(imageWidth: 10, imageHeight: 10)
+let film = Film(imageWidth: 400, imageHeight: 600)
 
 film.commitColor(atX: 0, atY: 0, color: simd_float3(0.8, 0.6, 0.6))
 
-var image = film.produceCGImage()
-
-// plain write to image
-func writeCGImage(_ image: CGImage, to destinationURL: URL) -> Bool {
-    guard let destination = CGImageDestinationCreateWithURL(destinationURL as CFURL, kUTTypePNG, 1, nil) else { return false }
-    CGImageDestinationAddImage(destination, image, nil)
-    return CGImageDestinationFinalize(destination)
-}
-
-
 let url = URL(fileURLWithPath: "./output.png")
+let success = film.saveImage(at: url)
 
-writeCGImage(image, to: url)
+if success {
+    print("Image successfully saved!")
+} else {
+    print("Image failed saving!")
+}
