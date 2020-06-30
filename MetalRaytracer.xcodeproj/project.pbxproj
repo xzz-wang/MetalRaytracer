@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		B06DF880249EC29300BD8145 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B06DF87F249EC29300BD8145 /* main.swift */; };
+		B0E5566124A5C6E000030471 /* TypesAndConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566024A5C6E000030471 /* TypesAndConstants.swift */; };
+		B0E5566324A5C76E00030471 /* Film.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566224A5C76E00030471 /* Film.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +27,8 @@
 /* Begin PBXFileReference section */
 		B06DF87C249EC29300BD8145 /* MetalRaytracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MetalRaytracer; sourceTree = BUILT_PRODUCTS_DIR; };
 		B06DF87F249EC29300BD8145 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		B0E5566024A5C6E000030471 /* TypesAndConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypesAndConstants.swift; sourceTree = "<group>"; };
+		B0E5566224A5C76E00030471 /* Film.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Film.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -38,11 +42,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B046C00D24A97E2100D135A1 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B06DF873249EC29300BD8145 = {
 			isa = PBXGroup;
 			children = (
 				B06DF87E249EC29300BD8145 /* MetalRaytracer */,
 				B06DF87D249EC29300BD8145 /* Products */,
+				B046C00D24A97E2100D135A1 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -58,6 +70,8 @@
 			isa = PBXGroup;
 			children = (
 				B06DF87F249EC29300BD8145 /* main.swift */,
+				B0E5566024A5C6E000030471 /* TypesAndConstants.swift */,
+				B0E5566224A5C76E00030471 /* Film.swift */,
 			);
 			path = MetalRaytracer;
 			sourceTree = "<group>";
@@ -78,6 +92,8 @@
 			dependencies = (
 			);
 			name = MetalRaytracer;
+			packageProductDependencies = (
+			);
 			productName = MetalRaytracer;
 			productReference = B06DF87C249EC29300BD8145 /* MetalRaytracer */;
 			productType = "com.apple.product-type.tool";
@@ -94,6 +110,7 @@
 				TargetAttributes = {
 					B06DF87B249EC29300BD8145 = {
 						CreatedOnToolsVersion = 11.5;
+						LastSwiftMigration = 1150;
 					};
 				};
 			};
@@ -106,6 +123,8 @@
 				Base,
 			);
 			mainGroup = B06DF873249EC29300BD8145;
+			packageReferences = (
+			);
 			productRefGroup = B06DF87D249EC29300BD8145 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -121,6 +140,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				B06DF880249EC29300BD8145 /* main.swift in Sources */,
+				B0E5566324A5C76E00030471 /* Film.swift in Sources */,
+				B0E5566124A5C6E000030471 /* TypesAndConstants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -243,10 +264,25 @@
 		B06DF884249EC29300BD8145 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = V3X3HUX8X2;
 				ENABLE_HARDENED_RUNTIME = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/MetalRaytracer/lodepng",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -254,10 +290,24 @@
 		B06DF885249EC29300BD8145 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = V3X3HUX8X2;
 				ENABLE_HARDENED_RUNTIME = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/MetalRaytracer/lodepng",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
+				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
