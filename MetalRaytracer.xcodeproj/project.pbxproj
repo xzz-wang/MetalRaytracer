@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		B06DF880249EC29300BD8145 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B06DF87F249EC29300BD8145 /* main.swift */; };
+		B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07ADD0E24AAD130005BCD16 /* Engine.swift */; };
+		B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BBC5E224B18578002B2EBD /* SceneLoader.swift */; };
+		B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BBC5E424B18B21002B2EBD /* MML.swift */; };
 		B0E5566124A5C6E000030471 /* TypesAndConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566024A5C6E000030471 /* TypesAndConstants.swift */; };
 		B0E5566324A5C76E00030471 /* Film.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566224A5C76E00030471 /* Film.swift */; };
 /* End PBXBuildFile section */
@@ -27,6 +30,9 @@
 /* Begin PBXFileReference section */
 		B06DF87C249EC29300BD8145 /* MetalRaytracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MetalRaytracer; sourceTree = BUILT_PRODUCTS_DIR; };
 		B06DF87F249EC29300BD8145 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		B07ADD0E24AAD130005BCD16 /* Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engine.swift; sourceTree = "<group>"; };
+		B0BBC5E224B18578002B2EBD /* SceneLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneLoader.swift; sourceTree = "<group>"; };
+		B0BBC5E424B18B21002B2EBD /* MML.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MML.swift; sourceTree = "<group>"; };
 		B0E5566024A5C6E000030471 /* TypesAndConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypesAndConstants.swift; sourceTree = "<group>"; };
 		B0E5566224A5C76E00030471 /* Film.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Film.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -70,7 +76,10 @@
 			isa = PBXGroup;
 			children = (
 				B06DF87F249EC29300BD8145 /* main.swift */,
+				B07ADD0E24AAD130005BCD16 /* Engine.swift */,
+				B0BBC5E224B18578002B2EBD /* SceneLoader.swift */,
 				B0E5566024A5C6E000030471 /* TypesAndConstants.swift */,
+				B0BBC5E424B18B21002B2EBD /* MML.swift */,
 				B0E5566224A5C76E00030471 /* Film.swift */,
 			);
 			path = MetalRaytracer;
@@ -139,9 +148,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */,
 				B06DF880249EC29300BD8145 /* main.swift in Sources */,
+				B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */,
 				B0E5566324A5C76E00030471 /* Film.swift in Sources */,
 				B0E5566124A5C6E000030471 /* TypesAndConstants.swift in Sources */,
+				B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

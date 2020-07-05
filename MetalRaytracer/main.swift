@@ -10,14 +10,23 @@ import Foundation
 import simd
 import CoreGraphics
 
-let film = Film(imageWidth: 400, imageHeight: 600)
 
-film.commitColor(atX: 0, atY: 0, color: simd_float3(0.8, 0.6, 0.6))
+// TODO: Parse the input filename from command line.
 
-let success = film.saveImage()
+let inputFileName = "./hw1/scene1.test"
+let engine = Engine()
+engine.render(filename: "./inputTest.test")
 
-if success {
-    print("Image successfully saved!")
-} else {
-    print("Image failed saving!")
-}
+
+
+//let film = Film(imageWidth: 400, imageHeight: 600)
+//
+//film.commitColor(atX: 0, atY: 0, color: simd_float3(0.8, 0.6, 0.6))
+//
+//let success = film.saveImage()
+//
+//if success {
+//    print("Image successfully saved!")
+//} else {
+//    print("Image failed saving!")
+//}
