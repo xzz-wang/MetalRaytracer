@@ -8,6 +8,7 @@
 
 import Foundation
 import simd
+import MetalPerformanceShaders
 
 class Engine {
     public func render(filename sourcePath: String) {
@@ -18,12 +19,6 @@ class Engine {
             return
         }
         
-        // TODO: Prepare the metal performance shader
-        print(scene)
-        
-
+        print(scene.debugDescription)
     }
-    
-    
-    
 }

@@ -8,6 +8,7 @@
 
 import Foundation
 import simd
+import MetalPerformanceShaders
 
 let PI: Float = 3.1415926535
 
@@ -26,18 +27,27 @@ struct quadlight {
 }
 
 struct material {
-    let diffuse: simd_float3
-    let specular: simd_float3
-    let emission: simd_float3
-    let ambient: simd_float3
+    var diffuse: simd_float3
+    var specular: simd_float3
+    var emission: simd_float3
     
-    let shininess: Float
-    let roughness: Float
+    var shininess: Float
+    var roughness: Float
+    
+    init() {
+        diffuse = simd_float3(repeating: 0.0)
+        specular = simd_float3(repeating: 0.0)
+        emission = simd_float3(repeating: 0.0)
+        
+        shininess = 1.0
+        roughness = 0.0
+    }
+    
 }
 
 
 class Scene {
-    var description: String {
+    var debugDescription: String {
         var buildingString = "";
         buildingString += "mapDepth: \t\(maxDepth)\n"
         buildingString += "imageSize: \t\(imageSize)\n"
@@ -50,10 +60,28 @@ class Scene {
     public var maxDepth: Int = -1
     public var imageSize: simd_int2 = simd_int2(400, 400)
     public var outputName: String = "output.png"
+    public var spp: Int = 1
     
-    public var cameraOrigin: simd_float3!
-    public var cameraLookAt: simd_float3!
-    public var cameraUp: simd_float3!
-    public var fieldOfView: Float!
-            
+    public var cameraOrigin: simd_float3?
+    public var cameraLookAt: simd_float3?
+    public var cameraUp: simd_float3?
+    public var fieldOfView: Float?
+    
+    // Part two: MPS
+    public var accelerationStructure: MPSTriangleAccelerationStructure?
+    public var intersector: MPSRayIntersector?
+    
+    
+    public func checkComplete() -> Bool {
+        if (cameraOrigin != nil) &&
+            cameraLookAt != nil &&
+            cameraUp != nil &&
+            fieldOfView != nil &&
+            accelerationStructure != nil &&
+            intersector != nil {
+            return true
+        }
+        
+        return false
+    }
 }
