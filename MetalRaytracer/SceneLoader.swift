@@ -14,6 +14,12 @@ class SceneLoader {
     
     private var scene: Scene!
     
+    // Camera info
+    var cameraOrigin: simd_float3?
+    var cameraLookAt: simd_float3?
+    var cameraUp: simd_float3?
+    var fieldOfView: Float?
+
     // Geometries
     private var sphereTransforms: [simd_float4x4] = []
     private var sphereMaterial: [material] = []
@@ -59,8 +65,10 @@ class SceneLoader {
             let thisCommand = args[0]
             if thisCommand == "#" { continue }
             
-            loadCommand(args: args, scene: scene)
+            loadCommand(args: args)
         }
+        
+        setupCamera()
         
         setupMPS()
         
@@ -77,6 +85,8 @@ class SceneLoader {
             print("The environment does not support Metal")
             return
         }
+        
+        scene.metalDevice = device
         
         // Make the vertex position buffer
         guard let vertexPositionBuffer = device.makeBuffer(bytes: triVerts, length: MemoryLayout<simd_float3>.size * triVerts.count, options: .storageModeShared) else {
@@ -100,7 +110,7 @@ class SceneLoader {
     /**
     Execute the command from the given substring array. args[0] is the command. Arguments starts at index 1.
      */
-    private func loadCommand(args: [Substring], scene: Scene) {
+    private func loadCommand(args: [Substring]) {
         let command = args[0]
         
         // MARK: Part 1: Rendering Specification
@@ -124,11 +134,11 @@ class SceneLoader {
             
         // MARK: Part 2: Camera and Geometry
         } else if command == "camera" {
-            scene.cameraOrigin = loadVec3(args: args, startAt: 1)
-            scene.cameraLookAt = loadVec3(args: args, startAt: 4)
-            scene.cameraUp = loadVec3(args: args, startAt: 7)
-            scene.fieldOfView = Float(args[10])
-            
+            cameraOrigin = loadVec3(args: args, startAt: 1)
+            cameraLookAt = loadVec3(args: args, startAt: 4)
+            cameraUp = loadVec3(args: args, startAt: 7)
+            fieldOfView = Float(args[10])
+                        
         } else if command == "sphere" {
             if let loc = loadVec3(args: args, startAt: 1), let radius = Float(args[4]) {
                 var transform = curTransform * matrix_identity_float4x4
@@ -204,6 +214,31 @@ class SceneLoader {
                 curMaterial.roughness = value
             }
         }
+    }
+    
+    
+    private func setupCamera() {
+        if cameraLookAt == nil || cameraOrigin == nil || fieldOfView == nil{
+            print("Incomplete information of camera!")
+            return
+        }
+        
+        let aspectRatio = Float(scene.imageSize.x) / Float(scene.imageSize.y)
+        let cameraLook = normalize(cameraLookAt! - cameraOrigin!)
+        let imagePlaneRight = normalize(cross(cameraLook, cameraOrigin!))
+        let imagePlaneUp = normalize(cross(imagePlaneRight, cameraLook))
+        
+        let temp = simd_float3(repeating: 0.0)
+        var tempCamera = camera(origin: temp, imagePlaneTopLeft: temp, pixelRight: temp, pixelDown: temp)
+        
+        tempCamera.origin = cameraOrigin!
+        tempCamera.imagePlaneTopLeft = cameraOrigin!
+        tempCamera.imagePlaneTopLeft += cameraLook / tan(PI * fieldOfView! / 360.0)
+        tempCamera.imagePlaneTopLeft += imagePlaneUp - aspectRatio * imagePlaneRight
+        tempCamera.pixelRight = (2.0 * aspectRatio / Float(scene.imageSize.x)) * imagePlaneRight
+        tempCamera.pixelDown = (-2.0 / Float(scene.imageSize.y)) * imagePlaneUp
+        
+        scene.camera = tempCamera
     }
     
     

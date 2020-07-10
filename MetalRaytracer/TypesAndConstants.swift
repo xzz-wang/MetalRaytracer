@@ -13,10 +13,10 @@ import MetalPerformanceShaders
 let PI: Float = 3.1415926535
 
 struct camera {
-    let origin: simd_float3
-    let imagePlaneTopLeft: simd_float3
-    let pixelRight: simd_float3
-    let PixelDown: simd_float3
+    var origin: simd_float3
+    var imagePlaneTopLeft: simd_float3
+    var pixelRight: simd_float3
+    var pixelDown: simd_float3
 }
 
 struct quadlight {
@@ -45,43 +45,5 @@ struct material {
     
 }
 
-
-class Scene {
-    var debugDescription: String {
-        var buildingString = "";
-        buildingString += "mapDepth: \t\(maxDepth)\n"
-        buildingString += "imageSize: \t\(imageSize)\n"
-        buildingString += "outputName: \t\(outputName)\n"
-
-        return buildingString
-    }
-    
-    // Part one: Rendering Specification
-    public var maxDepth: Int = -1
-    public var imageSize: simd_int2 = simd_int2(400, 400)
-    public var outputName: String = "output.png"
-    public var spp: Int = 1
-    
-    public var cameraOrigin: simd_float3?
-    public var cameraLookAt: simd_float3?
-    public var cameraUp: simd_float3?
-    public var fieldOfView: Float?
-    
-    // Part two: MPS
-    public var accelerationStructure: MPSTriangleAccelerationStructure?
-    public var intersector: MPSRayIntersector?
-    
-    
-    public func checkComplete() -> Bool {
-        if (cameraOrigin != nil) &&
-            cameraLookAt != nil &&
-            cameraUp != nil &&
-            fieldOfView != nil &&
-            accelerationStructure != nil &&
-            intersector != nil {
-            return true
-        }
-        
-        return false
-    }
-}
+typealias Ray = MPSRayOriginDirection
+typealias Intersection = MPSIntersectionDistancePrimitiveIndexCoordinates

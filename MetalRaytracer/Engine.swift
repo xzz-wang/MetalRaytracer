@@ -19,6 +19,26 @@ class Engine {
             return
         }
         
-        print(scene.debugDescription)
+        if !scene.isComplete() {
+            print("Incomplete information in the scene!")
+            return
+        }
+        
+        // Start the rendering
+        
+        // MARK: Step 1: Generate all initial rays
+        var initialRays: [Ray] = []
+        for y in 0..<scene.imageSize.y {
+            for x in 0..<scene.imageSize.x {
+                let target = scene.camera!.imagePlaneTopLeft
+                    + (Float(x) + 0.5) * scene.camera!.pixelRight
+                    + (Float(y) + 0.5) * scene.camera!.pixelDown
+                let direction = normalize(target - scene.camera!.origin)
+                
+                let thisRay = Ray(origin: scene.camera!.origin, direction: direction)
+                initialRays.append(thisRay)
+            }
+        }
+        
     }
 }
