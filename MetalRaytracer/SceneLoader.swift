@@ -72,6 +72,8 @@ class SceneLoader {
         
         setupMPS()
         
+        scene.triVerts = triVerts
+        scene.triMaterial = triMaterial
         
         return scene
     }
@@ -97,7 +99,7 @@ class SceneLoader {
         // Make the acceleration structure
         scene.accelerationStructure = MPSTriangleAccelerationStructure(device: device)
         scene.accelerationStructure!.vertexBuffer = vertexPositionBuffer
-        scene.accelerationStructure!.triangleCount = triVerts.count
+        scene.accelerationStructure!.triangleCount = triVerts.count / 3
         scene.accelerationStructure!.rebuild()
         
         scene.intersector = MPSRayIntersector.init(device: device)
@@ -161,9 +163,9 @@ class SceneLoader {
                 triIndices.append(count + 1)
                 triIndices.append(count + 2)
                 
-                triVerts.append(simd_make_float3(curTransform * simd_make_float4(rawVerts[indices[0]])))
-                triVerts.append(simd_make_float3(curTransform * simd_make_float4(rawVerts[indices[1]])))
-                triVerts.append(simd_make_float3(curTransform * simd_make_float4(rawVerts[indices[2]])))
+                triVerts.append(simd_make_float3(curTransform * simd_make_float4(rawVerts[indices[0]], 1.0)))
+                triVerts.append(simd_make_float3(curTransform * simd_make_float4(rawVerts[indices[1]], 1.0)))
+                triVerts.append(simd_make_float3(curTransform * simd_make_float4(rawVerts[indices[2]], 1.0)))
                 
                 triMaterial.append(curMaterial)
             }
@@ -225,7 +227,7 @@ class SceneLoader {
         
         let aspectRatio = Float(scene.imageSize.x) / Float(scene.imageSize.y)
         let cameraLook = normalize(cameraLookAt! - cameraOrigin!)
-        let imagePlaneRight = normalize(cross(cameraLook, cameraOrigin!))
+        let imagePlaneRight = normalize(cross(cameraLook, cameraUp!))
         let imagePlaneUp = normalize(cross(imagePlaneRight, cameraLook))
         
         let temp = simd_float3(repeating: 0.0)

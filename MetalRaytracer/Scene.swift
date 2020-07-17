@@ -35,6 +35,10 @@ class Scene {
     public var accelerationStructure: MPSTriangleAccelerationStructure?
     public var intersector: MPSRayIntersector?
     
+    // Part three: Geometrics
+    public var triVerts: [simd_float3] = []
+    public var triMaterial: [material] = []
+    
     
     public func isComplete() -> Bool {
         if (camera != nil) &&

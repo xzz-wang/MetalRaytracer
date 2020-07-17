@@ -15,18 +15,25 @@ import CoreGraphics
 
 let inputFileName = "./hw1/scene1.test"
 let engine = Engine()
-engine.render(filename: "./inputTest.test")
+engine.render(filename: "./hw1/scene4-emission.test")
 
 
 
-//let film = Film(imageWidth: 400, imageHeight: 600)
-//
-//film.commitColor(atX: 0, atY: 0, color: simd_float3(0.8, 0.6, 0.6))
-//
-//let success = film.saveImage()
-//
-//if success {
-//    print("Image successfully saved!")
-//} else {
-//    print("Image failed saving!")
-//}
+
+func testFilm() {
+    let film = Film(imageWidth: 400, imageHeight: 400)
+    
+    for x in 0..<400 {
+        for y in 0..<400 {
+            film.commitColor(atX: x, atY: y, color: simd_float3(Float(x) / 400, Float(y) / 400, Float(y) / 400))
+        }
+    }
+
+    let success = film.saveImage()
+
+    if success {
+        print("Image successfully saved!")
+    } else {
+        print("Image failed saving!")
+    }
+}

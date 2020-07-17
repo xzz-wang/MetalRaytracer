@@ -18,9 +18,9 @@ class MML {
      */
     static func translate(mat: simd_float4x4, by displacement: simd_float3) -> simd_float4x4 {
         var returnValue = mat
-        returnValue[3, 1] += displacement.x
-        returnValue[3, 2] += displacement.y
-        returnValue[3, 3] += displacement.z
+        returnValue[3, 0] += displacement.x
+        returnValue[3, 1] += displacement.y
+        returnValue[3, 2] += displacement.z
         
         return returnValue
     }

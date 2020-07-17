@@ -32,6 +32,10 @@ class Film {
         colorBuffer = [RGBData](repeating: RGBData(), count: width * height)
     }
     
+    convenience init(size: simd_int2, outputFileName name: String = "./output.png") {
+        self.init(imageWidth: Int(size.x), imageHeight: Int(size.y), outputFileName: name)
+    }
+    
     
     
     // Update the color in the color buffer array
@@ -42,7 +46,7 @@ class Film {
             return;
         }
         
-        let index = x * width + y;
+        let index = x + y * width;
         colorBuffer[index] = RGBData(color: color);
     }
     
@@ -92,6 +96,7 @@ class Film {
         CGImageDestinationAddImage(destination, image, nil)
         return CGImageDestinationFinalize(destination)
     }
+    
 }
 
 
