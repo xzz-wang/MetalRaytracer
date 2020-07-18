@@ -24,10 +24,14 @@ class Scene {
     // Part one: Rendering Specification
     public var maxDepth: Int = -1
     public var imageSize: simd_int2 = simd_int2(400, 400)
+    public var pixelCount: Int {
+        return Int(imageSize.x * imageSize.y)
+    }
+    
     public var outputName: String = "output.png"
     public var spp: Int = 1
     
-    public var camera: camera?
+    public var camera: Camera?
     
     
     // Part two: MPS
@@ -37,7 +41,7 @@ class Scene {
     
     // Part three: Geometrics
     public var triVerts: [simd_float3] = []
-    public var triMaterial: [material] = []
+    public var triMaterial: [Material] = []
     
     
     public func isComplete() -> Bool {
@@ -49,5 +53,9 @@ class Scene {
         }
         
         return false
+    }
+    
+    public func getSceneData() -> SceneData {
+        return SceneData(camera: camera!, imageSize: imageSize)
     }
 }

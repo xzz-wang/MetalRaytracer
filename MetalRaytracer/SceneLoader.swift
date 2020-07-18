@@ -22,15 +22,15 @@ class SceneLoader {
 
     // Geometries
     private var sphereTransforms: [simd_float4x4] = []
-    private var sphereMaterial: [material] = []
+    private var sphereMaterial: [Material] = []
     
     private var rawVerts: [simd_float3] = []
     private var triIndices: [Int] = []
     private var triVerts: [simd_float3] = []
-    private var triMaterial: [material] = []
+    private var triMaterial: [Material] = []
 
     // Material
-    private var curMaterial: material = material()
+    private var curMaterial: Material = Material()
     
     // Transformation matrice
     private var transformationStack: [simd_float4x4] = [matrix_identity_float4x4]
@@ -231,7 +231,7 @@ class SceneLoader {
         let imagePlaneUp = normalize(cross(imagePlaneRight, cameraLook))
         
         let temp = simd_float3(repeating: 0.0)
-        var tempCamera = camera(origin: temp, imagePlaneTopLeft: temp, pixelRight: temp, pixelDown: temp)
+        var tempCamera = Camera(origin: temp, imagePlaneTopLeft: temp, pixelRight: temp, pixelDown: temp)
         
         tempCamera.origin = cameraOrigin!
         tempCamera.imagePlaneTopLeft = cameraOrigin!

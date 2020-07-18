@@ -11,65 +11,135 @@ import simd
 import MetalPerformanceShaders
 
 class Engine {
-    public func render(filename sourcePath: String) {
+    private var scene: Scene!
+    
+    // Buffers
+    private var rayBuffer: MTLBuffer!
+    private var intersectionBuffer: MTLBuffer!
+    private var sceneDataBuffer: MTLBuffer!
+    
+    
+    /**
+     Helper method that loads scene for later use. Metal device reference, accelerationStructure, and MPSRayintersector are all setup here.
+     */
+    private func setupScene(path: String) -> Bool {
         // Load the Scene from the input file
         let loader = SceneLoader()
-        guard let scene = loader.loadScene(path: sourcePath) else {
+        guard let newaScene = loader.loadScene(path: path) else {
             print("Can not load the scene from path!")
-            return
+            return false
         }
         
-        if !scene.isComplete() {
+        if !newaScene.isComplete() {
             print("Incomplete information in the scene!")
+            return false
+        }
+        
+        scene = newaScene
+        
+        return true
+    }
+    
+    
+    /**
+     Helper method that sets up all required buffers. Only called once after setupScene
+     */
+    private func setupBuffers() -> Bool {
+        let length = Int(scene.imageSize.x * scene.imageSize.y)
+        
+        // Initialize SceneData buffer
+        let data = [scene.getSceneData()]
+        if let buffer = scene.metalDevice!.makeBuffer(bytes: data ,length: MemoryLayout<SceneData>.size, options: .storageModeShared) {
+            sceneDataBuffer = buffer
+        } else {
+            print("Unable to initialize sceneDataBuffer!")
+            return false
+        }
+        
+        
+        // Initialize RayBuffer
+        if let buffer = scene.metalDevice!.makeBuffer(length: length * MemoryLayout<Ray>.size, options: .storageModeShared) {
+            rayBuffer = buffer
+        } else {
+            print("Unable to initialize rayBuffer!")
+            return false
+        }
+        
+        // Initialize Intersection Buffer
+        if let buffer = scene.metalDevice!.makeBuffer(length: MemoryLayout<Intersection>.size * length, options: .storageModeShared) {
+            intersectionBuffer = buffer
+        } else {
+            print("Unable to generate intersectionBuffer!")
+            return false
+        }
+        
+        return true
+    }
+    
+    
+    /**
+     The core of the rendering engine. Everything goes here.
+     */
+    public func render(filename sourcePath: String) {
+        
+        // Perform setup
+        if !setupScene(path: sourcePath) {
             return
         }
         
-        // Start the rendering
+        if !setupBuffers() {
+            return
+        }
+        
+        // Start the rendering stopwatch
         let startTime = Date.init()
         
-        // MARK: Step 1: Generate all initial rays
-        // TODO: Take into account of spp, and maybe move this into different thread
-        var initialRays: [Ray] = []
-        for y in 0..<scene.imageSize.y {
-            for x in 0..<scene.imageSize.x {
-                let target = scene.camera!.imagePlaneTopLeft
-                    + (Float(x) + 0.5) * scene.camera!.pixelRight
-                    + (Float(y) + 0.5) * scene.camera!.pixelDown
-                let direction = normalize(target - scene.camera!.origin)
-                
-                let thisRay = Ray(origin: scene.camera!.origin, direction: direction)
-                initialRays.append(thisRay)
-            }
-        }
-        
-        // Setup the buffers
-        guard let rayBuffer = scene.metalDevice!.makeBuffer(
-            bytes: initialRays,
-            length: initialRays.count * MemoryLayout<Ray>.size,
-            options: .storageModeShared) else {
-                print("Unable to generate rayBuffer!")
-                return
-        }
-        guard let intersectionBuffer = scene.metalDevice!.makeBuffer(length: MemoryLayout<Intersection>.size * initialRays.count, options: .storageModeShared) else {
-            print("Unable to generate intersectionBuffer!")
+        // Get default library
+        guard let defaultLibrary = scene.metalDevice?.makeDefaultLibrary() else {
+            print("Unable to get defaultLibrary!")
             return
         }
+        
+        guard let initRayFunction = defaultLibrary.makeFunction(name: "generateInitRay") else {
+            print("Failed to fetch initRay shader method")
+            return
+        }
+        
         guard let commandQueue = scene.metalDevice?.makeCommandQueue() else {
-            print("Unable to generate command buffer")
+            print("Unable to generate command queue")
             return
         }
         
+        guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+            print("Unable to generate command Buffer")
+            return
+        }
         
+        // MARK: Step 1: Generate all initial rays
+        var initRayPipeline: MTLComputePipelineState!
+        do {
+            initRayPipeline = try scene.metalDevice?.makeComputePipelineState(function: initRayFunction)
+        } catch {
+            print("Failed to create initRayPipeline")
+            return
+        }
+        
+        let initRayEncoder = commandBuffer.makeComputeCommandEncoder()
+        initRayEncoder?.setComputePipelineState(initRayPipeline)
+        initRayEncoder?.setBuffer(sceneDataBuffer, offset: 0, index: 0)
+        initRayEncoder?.setBuffer(rayBuffer, offset: 0, index: 1)
+        let threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
+        let threadgroups = MTLSize(width: (Int(scene.imageSize.x)  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
+                                   height: (Int(scene.imageSize.y) + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height,
+                                   depth: 1);
+        print(initRayPipeline.maxTotalThreadsPerThreadgroup)
+        initRayEncoder?.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup) // Copied from example
+        initRayEncoder?.endEncoding()
+                        
         // MARK: Step 2: Loop until all the rays are terminated.
         var depthCount = 0
         while depthCount != scene.maxDepth {
-            
-            // TODO: Get the result of intersection, then shade
-            guard let commandBuffer = commandQueue.makeCommandBuffer() else {
-                print("Unable to generate command queue")
-                return
-            }
-            
+                        
             scene.intersector?.encodeIntersection(
                 commandBuffer: commandBuffer,
                 intersectionType: .nearest,
@@ -77,9 +147,9 @@ class Engine {
                 rayBufferOffset: 0,
                 intersectionBuffer: intersectionBuffer,
                 intersectionBufferOffset: 0,
-                rayCount: initialRays.count,
+                rayCount: scene.pixelCount,
                 accelerationStructure: scene.accelerationStructure!)
-            
+                        
             commandBuffer.commit()
             print("Command Comitted")
             
@@ -87,8 +157,8 @@ class Engine {
             print("Command completed")
             
             // Loop through each pixel and calculate the contribution
-            let pointer = intersectionBuffer.contents().bindMemory(to: Intersection.self, capacity: initialRays.count)
-            let intersections: [Intersection] = Array(UnsafeBufferPointer(start: pointer, count: initialRays.count))
+            let pointer = intersectionBuffer.contents().bindMemory(to: Intersection.self, capacity: scene.pixelCount)
+            let intersections: [Intersection] = Array(UnsafeBufferPointer(start: pointer, count: scene.pixelCount))
             let film = Film(size: scene.imageSize, outputFileName: scene.outputName)
             for y in 0..<scene.imageSize.y {
                 for x in 0..<scene.imageSize.x {
@@ -101,7 +171,6 @@ class Engine {
                     
                     let triID = Int(thisHit.primitiveIndex)
                     let hitMaterial = scene.triMaterial[triID]
-                    let thisRay = initialRays[thisIdx]
                     
                     // Now interpolate the hitPosition
                     let v1 = scene.triVerts[3 * triID + 0]

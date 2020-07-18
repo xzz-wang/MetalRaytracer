@@ -9,11 +9,13 @@
 /* Begin PBXBuildFile section */
 		B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B008D1D024B6DF4B00D4C67E /* Scene.swift */; };
 		B060C86A24B82E22004BB4ED /* MetalPerformanceShaders.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B060C86924B82E22004BB4ED /* MetalPerformanceShaders.framework */; };
+		B06CD10A24C178EB00E155B0 /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06CD10924C178EB00E155B0 /* shaders.metal */; };
+		B06CD10C24C17A0100E155B0 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B06CD10B24C17A0100E155B0 /* Constants.swift */; };
 		B06DF880249EC29300BD8145 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B06DF87F249EC29300BD8145 /* main.swift */; };
 		B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07ADD0E24AAD130005BCD16 /* Engine.swift */; };
+		B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */ = {isa = PBXBuildFile; fileRef = B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */; };
 		B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BBC5E224B18578002B2EBD /* SceneLoader.swift */; };
 		B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BBC5E424B18B21002B2EBD /* MML.swift */; };
-		B0E5566124A5C6E000030471 /* TypesAndConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566024A5C6E000030471 /* TypesAndConstants.swift */; };
 		B0E5566324A5C76E00030471 /* Film.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566224A5C76E00030471 /* Film.swift */; };
 /* End PBXBuildFile section */
 
@@ -32,12 +34,15 @@
 /* Begin PBXFileReference section */
 		B008D1D024B6DF4B00D4C67E /* Scene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scene.swift; sourceTree = "<group>"; };
 		B060C86924B82E22004BB4ED /* MetalPerformanceShaders.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalPerformanceShaders.framework; path = System/Library/Frameworks/MetalPerformanceShaders.framework; sourceTree = SDKROOT; };
+		B06CD10924C178EB00E155B0 /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
+		B06CD10B24C17A0100E155B0 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		B06DF87C249EC29300BD8145 /* MetalRaytracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MetalRaytracer; sourceTree = BUILT_PRODUCTS_DIR; };
 		B06DF87F249EC29300BD8145 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		B07ADD0E24AAD130005BCD16 /* Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engine.swift; sourceTree = "<group>"; };
+		B08CA25D24C16AC4007CDAD0 /* MetalRaytracer-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MetalRaytracer-Bridging-Header.h"; sourceTree = "<group>"; };
+		B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderTypes.h; sourceTree = "<group>"; };
 		B0BBC5E224B18578002B2EBD /* SceneLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneLoader.swift; sourceTree = "<group>"; };
 		B0BBC5E424B18B21002B2EBD /* MML.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MML.swift; sourceTree = "<group>"; };
-		B0E5566024A5C6E000030471 /* TypesAndConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypesAndConstants.swift; sourceTree = "<group>"; };
 		B0E5566224A5C76E00030471 /* Film.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Film.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -85,9 +90,12 @@
 				B07ADD0E24AAD130005BCD16 /* Engine.swift */,
 				B008D1D024B6DF4B00D4C67E /* Scene.swift */,
 				B0BBC5E224B18578002B2EBD /* SceneLoader.swift */,
-				B0E5566024A5C6E000030471 /* TypesAndConstants.swift */,
 				B0BBC5E424B18B21002B2EBD /* MML.swift */,
 				B0E5566224A5C76E00030471 /* Film.swift */,
+				B06CD10B24C17A0100E155B0 /* Constants.swift */,
+				B06CD10924C178EB00E155B0 /* shaders.metal */,
+				B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */,
+				B08CA25D24C16AC4007CDAD0 /* MetalRaytracer-Bridging-Header.h */,
 			);
 			path = MetalRaytracer;
 			sourceTree = "<group>";
@@ -126,7 +134,7 @@
 				TargetAttributes = {
 					B06DF87B249EC29300BD8145 = {
 						CreatedOnToolsVersion = 11.5;
-						LastSwiftMigration = 1150;
+						LastSwiftMigration = 1160;
 					};
 				};
 			};
@@ -155,13 +163,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B06CD10A24C178EB00E155B0 /* shaders.metal in Sources */,
 				B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */,
 				B06DF880249EC29300BD8145 /* main.swift in Sources */,
 				B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */,
 				B0E5566324A5C76E00030471 /* Film.swift in Sources */,
 				B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */,
-				B0E5566124A5C6E000030471 /* TypesAndConstants.swift in Sources */,
+				B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */,
 				B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */,
+				B06CD10C24C17A0100E155B0 /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -299,7 +309,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_INSTALL_OBJC_HEADER = NO;
-				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "MetalRaytracer/MetalRaytracer-Bridging-Header.h";
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
@@ -325,7 +335,7 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_INSTALL_OBJC_HEADER = NO;
-				SWIFT_OBJC_BRIDGING_HEADER = "";
+				SWIFT_OBJC_BRIDGING_HEADER = "MetalRaytracer/MetalRaytracer-Bridging-Header.h";
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 				SWIFT_PRECOMPILE_BRIDGING_HEADER = NO;
 				SWIFT_VERSION = 5.0;
