@@ -196,22 +196,23 @@ class Engine {
             shadingEncoder?.setBuffer(outputImageBuffer, offset: 0, index: 5)
             shadingEncoder?.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
             shadingEncoder?.endEncoding()
-
-            commandBuffer.commit()
-            print("Command Comitted")
-            
-            commandBuffer.waitUntilCompleted()
-            print("Command completed")
-            
-            let film = Film(size: scene.imageSize, outputFileName: scene.outputName)
-            let pointer = outputImageBuffer.contents().bindMemory(to: RGBData.self, capacity: scene.pixelCount)
-            let imageData = Array(UnsafeBufferPointer(start: pointer, count: scene.pixelCount))
-            film.setImageData(data: imageData)
-            film.saveImage()
             
             depthCount += 1
             depthCount = scene.maxDepth
-            print("Should End!")
+        }
+        
+        commandBuffer.commit()
+        print("Command Comitted")
+        
+        commandBuffer.waitUntilCompleted()
+        print("Command completed")
+        
+        let film = Film(size: scene.imageSize, outputFileName: scene.outputName)
+        let pointer = outputImageBuffer.contents().bindMemory(to: RGBData.self, capacity: scene.pixelCount)
+        let imageData = Array(UnsafeBufferPointer(start: pointer, count: scene.pixelCount))
+        film.setImageData(data: imageData)
+        if !film.saveImage() {
+            print("Image save failed")
         }
         
         // Render finished

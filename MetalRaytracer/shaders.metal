@@ -41,8 +41,10 @@ kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
     // Get the current buffer index
     int index = idx2.x + scene.imageSize.x * idx2.y;
     
-    // Check if there's an intersection
     Intersection hit = intersections[index];
+    Ray ray = rays[index];
+    
+    // Check if there's an intersection
     if (hit.distance < 0) {
         return;
     }
@@ -54,7 +56,9 @@ kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
     
     simd_float3 hitPosition = v1 * hit.coordinates.x + v2 * hit.coordinates.y + v3 * (1.0f - hit.coordinates.x - hit.coordinates.y);
     
-    outputBuffer[index] = float3ToRGB(hitMaterial.emission);
+    simd_float3 outputColor = hitMaterial.emission;
+    
+    outputBuffer[index] = float3ToRGB(outputColor);
 }
 
 
