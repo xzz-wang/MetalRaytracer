@@ -42,3 +42,10 @@ struct SceneData {
     struct Camera camera;
     simd_int2 imageSize;
 };
+
+struct RGBData {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
+};

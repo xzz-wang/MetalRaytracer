@@ -47,7 +47,7 @@ class Film {
         }
         
         let index = x + y * width;
-        colorBuffer[index] = RGBData(color: color);
+        colorBuffer[index] = float3ToRGB(color: color);
     }
     
     
@@ -97,28 +97,12 @@ class Film {
         return CGImageDestinationFinalize(destination)
     }
     
-}
-
-
-/*
- The Strut used to store 8 bit information of the image
- */
-struct RGBData {
-    var r: UInt8
-    var g: UInt8
-    var b: UInt8
-    var a: UInt8 = 255
-    
-    init() {
-        r = 0
-        g = 0
-        b = 0
+    public func setImageData(data: [RGBData]) {
+        colorBuffer = data;
     }
     
-    init(color: simd_float3) {
-        r = UInt8(color.x * 255)
-        g = UInt8(color.y * 255)
-        b = UInt8(color.z * 255)
+    private func float3ToRGB(color: simd_float3) -> RGBData {
+        return RGBData(r: UInt8(color.x * 255), g: UInt8(color.y * 255), b: UInt8(color.z * 255), a: 255)
     }
     
 }

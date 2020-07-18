@@ -14,9 +14,13 @@ class Engine {
     private var scene: Scene!
     
     // Buffers
+    private var sceneDataBuffer: MTLBuffer!
+    private var triVertexBuffer: MTLBuffer!
+    private var triMaterialBuffer: MTLBuffer!
+
     private var rayBuffer: MTLBuffer!
     private var intersectionBuffer: MTLBuffer!
-    private var sceneDataBuffer: MTLBuffer!
+    private var outputImageBuffer: MTLBuffer!
     
     
     /**
@@ -73,6 +77,30 @@ class Engine {
             return false
         }
         
+        // Initialize Vertex Buffer
+        if let buffer = scene.metalDevice!.makeBuffer(bytes: scene.triVerts, length: scene.triVerts.count * MemoryLayout<simd_float3>.size, options: .storageModeShared) {
+            triVertexBuffer = buffer
+        } else {
+            print("Unable to generate vertex buffer")
+            return false
+        }
+        
+        // Initialize Vertex Buffer
+        if let buffer = scene.metalDevice!.makeBuffer(bytes: scene.triMaterial, length: scene.triMaterial.count * MemoryLayout<Material>.size, options: .storageModeShared) {
+            triMaterialBuffer = buffer
+        } else {
+            print("Unable to generate material buffer")
+            return false
+        }
+
+        // Initialize Output Buffer
+        if let buffer = scene.metalDevice!.makeBuffer(length: length * MemoryLayout<RGBData>.size, options: .storageModeShared) {
+            outputImageBuffer = buffer
+        } else {
+            print("Unable to generate output buffer")
+            return false
+        }
+        
         return true
     }
     
@@ -105,6 +133,11 @@ class Engine {
             return
         }
         
+        guard let shadingKernelFunc = defaultLibrary.makeFunction(name: "shadingKernel") else {
+            print("Failed to fetch shading kernel method")
+            return
+        }
+        
         guard let commandQueue = scene.metalDevice?.makeCommandQueue() else {
             print("Unable to generate command queue")
             return
@@ -117,10 +150,12 @@ class Engine {
         
         // MARK: Step 1: Generate all initial rays
         var initRayPipeline: MTLComputePipelineState!
+        var shadingKernelPipeline: MTLComputePipelineState!
         do {
             initRayPipeline = try scene.metalDevice?.makeComputePipelineState(function: initRayFunction)
+            shadingKernelPipeline = try scene.metalDevice?.makeComputePipelineState(function: shadingKernelFunc)
         } catch {
-            print("Failed to create initRayPipeline")
+            print("Failed to create Pipelines")
             return
         }
         
@@ -132,7 +167,6 @@ class Engine {
         let threadgroups = MTLSize(width: (Int(scene.imageSize.x)  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
                                    height: (Int(scene.imageSize.y) + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height,
                                    depth: 1);
-        print(initRayPipeline.maxTotalThreadsPerThreadgroup)
         initRayEncoder?.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup) // Copied from example
         initRayEncoder?.endEncoding()
                         
@@ -149,44 +183,35 @@ class Engine {
                 intersectionBufferOffset: 0,
                 rayCount: scene.pixelCount,
                 accelerationStructure: scene.accelerationStructure!)
-                        
+            
+            // Shade the image using a shader
+            
+            let shadingEncoder = commandBuffer.makeComputeCommandEncoder()
+            shadingEncoder?.setComputePipelineState(shadingKernelPipeline)
+            shadingEncoder?.setBuffer(sceneDataBuffer, offset: 0, index: 0)
+            shadingEncoder?.setBuffer(triVertexBuffer, offset: 0, index: 1)
+            shadingEncoder?.setBuffer(rayBuffer, offset: 0, index: 2)
+            shadingEncoder?.setBuffer(intersectionBuffer, offset: 0, index: 3)
+            shadingEncoder?.setBuffer(triMaterialBuffer, offset: 0, index: 4)
+            shadingEncoder?.setBuffer(outputImageBuffer, offset: 0, index: 5)
+            shadingEncoder?.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
+            shadingEncoder?.endEncoding()
+
             commandBuffer.commit()
             print("Command Comitted")
             
             commandBuffer.waitUntilCompleted()
             print("Command completed")
             
-            // Loop through each pixel and calculate the contribution
-            let pointer = intersectionBuffer.contents().bindMemory(to: Intersection.self, capacity: scene.pixelCount)
-            let intersections: [Intersection] = Array(UnsafeBufferPointer(start: pointer, count: scene.pixelCount))
             let film = Film(size: scene.imageSize, outputFileName: scene.outputName)
-            for y in 0..<scene.imageSize.y {
-                for x in 0..<scene.imageSize.x {
- 
-                    let thisIdx = Int(y * scene.imageSize.x + x)
-                    let thisHit = intersections[thisIdx]
-                    if thisHit.distance < 0 {
-                        continue
-                    }
-                    
-                    let triID = Int(thisHit.primitiveIndex)
-                    let hitMaterial = scene.triMaterial[triID]
-                    
-                    // Now interpolate the hitPosition
-                    let v1 = scene.triVerts[3 * triID + 0]
-                    let v2 = scene.triVerts[3 * triID + 1]
-                    let v3 = scene.triVerts[3 * triID + 2]
-                    let hitPosition = interpolateVec3(v1: v1, v2: v2, v3: v3, coord: thisHit.coordinates)
-                    
-                    film.commitColor(atX: Int(x), atY: Int(y), color: hitMaterial.emission)
-                }
-            }
+            let pointer = outputImageBuffer.contents().bindMemory(to: RGBData.self, capacity: scene.pixelCount)
+            let imageData = Array(UnsafeBufferPointer(start: pointer, count: scene.pixelCount))
+            film.setImageData(data: imageData)
+            film.saveImage()
             
             depthCount += 1
             depthCount = scene.maxDepth
             print("Should End!")
-            
-            film.saveImage()
         }
         
         // Render finished
