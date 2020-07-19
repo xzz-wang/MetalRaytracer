@@ -36,12 +36,18 @@ class Scene {
     
     // Part two: MPS
     public var metalDevice: MTLDevice?
+    public var triVertsBuffer: MTLBuffer?
     public var accelerationStructure: MPSTriangleAccelerationStructure?
     public var intersector: MPSRayIntersector?
     
     // Part three: Geometrics
     public var triVerts: [simd_float3] = []
     public var triMaterial: [Material] = []
+    
+    // Part four: Lights
+    public var directionalLights: [DirectionalLight] = []
+    public var pointLights: [PointLight] = []
+    public var quadLights: [Quadlight] = []
     
     
     public func isComplete() -> Bool {

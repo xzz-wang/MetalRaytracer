@@ -91,17 +91,20 @@ class SceneLoader {
         scene.metalDevice = device
         
         // Make the vertex position buffer
-        guard let vertexPositionBuffer = device.makeBuffer(bytes: triVerts, length: MemoryLayout<simd_float3>.size * triVerts.count, options: .storageModeShared) else {
+        guard let buffer = device.makeBuffer(bytes: triVerts, length: MemoryLayout<simd_float3>.size * triVerts.count, options: .storageModeShared) else {
             print("Failed to make vertexPositionBuffer!")
             return
         }
         
+        scene.triVertsBuffer = buffer
+        
         // Make the acceleration structure
         scene.accelerationStructure = MPSTriangleAccelerationStructure(device: device)
-        scene.accelerationStructure!.vertexBuffer = vertexPositionBuffer
+        scene.accelerationStructure!.vertexBuffer = scene.triVertsBuffer
         scene.accelerationStructure!.triangleCount = triVerts.count / 3
         scene.accelerationStructure!.rebuild()
         
+        // Make the MPSIntersector
         scene.intersector = MPSRayIntersector.init(device: device)
     }
 
@@ -211,9 +214,39 @@ class SceneLoader {
             if let rgb = loadVec3(args: args, startAt: 1) {
                 curMaterial.emission = rgb
             }
+        } else if command == "ambient" {
+            if let rgb = loadVec3(args: args, startAt: 1) {
+                curMaterial.ambient = rgb
+            }
         } else if command == "roughness" {
             if let value = Float(args[1]) {
                 curMaterial.roughness = value
+            }
+            
+        // MARK: Part 5: Lights
+        } else if command == "directional" {
+            if let direction = loadVec3(args: args, startAt: 1) {
+                if let rgb = loadVec3(args: args, startAt: 4) {
+                    let newLight = DirectionalLight(toDirection: direction, brightness: rgb)
+                    scene.directionalLights.append(newLight)
+                }
+            }
+        } else if command == "point" {
+            if let position = loadVec3(args: args, startAt: 1) {
+                if let rgb = loadVec3(args: args, startAt: 4) {
+                    let newLight = PointLight(position: position, brightness: rgb)
+                    scene.pointLights.append(newLight)
+                }
+            }
+        } else if command == "quadlight" {
+            var light = Quadlight()
+            if let a = loadVec3(args: args, startAt: 1), let ab = loadVec3(args: args, startAt: 4), let ac = loadVec3(args: args, startAt: 7), let rgb = loadVec3(args: args, startAt: 10) {
+                light.a = a
+                light.ab = ab
+                light.ac = ac
+                light.intensity = rgb
+                
+                scene.quadLights.append(light)
             }
         }
     }

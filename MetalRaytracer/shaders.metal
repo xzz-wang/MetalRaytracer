@@ -31,12 +31,12 @@ inline RGBData float3ToRGB(simd_float3 value) {
     return data;
 }
 
-kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
+kernel void neeKernel(simd_uint2 idx2 [[thread_position_in_grid]],
                           constant SceneData & scene,
                           constant simd_float3 * vertexBuffer,
+                          constant Material * triMaterials,
                           device Ray * rays,
                           device Intersection * intersections,
-                          device Material * triMaterials,
                           device RGBData * outputBuffer) {
     // Get the current buffer index
     int index = idx2.x + scene.imageSize.x * idx2.y;

@@ -13,11 +13,21 @@ import MetalPerformanceShaders
 class Engine {
     private var scene: Scene!
     
+    // Metal Objects
+    private var commandQueue: MTLCommandQueue!
+    
+    // Pipelines
+    private var initRayPipeline: MTLComputePipelineState!
+    private var neePipeline: MTLComputePipelineState! // Next-event estimation, execute after itersections were found
+    private var shadingPipeline: MTLComputePipelineState! // Shade the image and proeduce bounces
+    
     // Buffers
+    // Read-only Buffers
     private var sceneDataBuffer: MTLBuffer!
     private var triVertexBuffer: MTLBuffer!
     private var triMaterialBuffer: MTLBuffer!
 
+    // InitRays
     private var rayBuffer: MTLBuffer!
     private var intersectionBuffer: MTLBuffer!
     private var outputImageBuffer: MTLBuffer!
@@ -29,17 +39,17 @@ class Engine {
     private func setupScene(path: String) -> Bool {
         // Load the Scene from the input file
         let loader = SceneLoader()
-        guard let newaScene = loader.loadScene(path: path) else {
+        guard let newScene = loader.loadScene(path: path) else {
             print("Can not load the scene from path!")
             return false
         }
         
-        if !newaScene.isComplete() {
+        if !newScene.isComplete() {
             print("Incomplete information in the scene!")
             return false
         }
         
-        scene = newaScene
+        scene = newScene
         
         return true
     }
@@ -85,7 +95,7 @@ class Engine {
             return false
         }
         
-        // Initialize Vertex Buffer
+        // Initialize Triangle Material
         if let buffer = scene.metalDevice!.makeBuffer(bytes: scene.triMaterial, length: scene.triMaterial.count * MemoryLayout<Material>.size, options: .storageModeShared) {
             triMaterialBuffer = buffer
         } else {
@@ -93,7 +103,7 @@ class Engine {
             return false
         }
 
-        // Initialize Output Buffer
+        // Initialize Output Image data Buffer
         if let buffer = scene.metalDevice!.makeBuffer(length: length * MemoryLayout<RGBData>.size, options: .storageModeShared) {
             outputImageBuffer = buffer
         } else {
@@ -106,59 +116,66 @@ class Engine {
     
     
     /**
+     Setup the commandQueue and all the pipelines needed for rendering
+     */
+    private func setupPipelines() -> Bool {
+        // Get default library
+        guard let defaultLibrary = scene.metalDevice?.makeDefaultLibrary() else {
+            print("Unable to get defaultLibrary!")
+            return false
+        }
+        
+        // Pipeline 1: Initialize all the rays
+        guard let initRayFunction = defaultLibrary.makeFunction(name: "generateInitRay") else {
+            print("Failed to fetch initRay shader method")
+            return false
+        }
+        
+        // Pipeline 2: compute nee
+        guard let neeKernalFunc = defaultLibrary.makeFunction(name: "neeKernel") else {
+            print("Failed to fetch nee kernel method")
+            return false
+        }
+        
+        do {
+            initRayPipeline = try scene.metalDevice?.makeComputePipelineState(function: initRayFunction)
+            neePipeline = try scene.metalDevice?.makeComputePipelineState(function: neeKernalFunc)
+        } catch {
+            print("Failed to create Pipelines")
+            return false
+        }
+
+        
+        guard let queue = scene.metalDevice?.makeCommandQueue() else {
+            print("Unable to generate command queue")
+            return false
+        }
+        commandQueue = queue
+        
+        return true
+    }
+    
+    
+    /**
      The core of the rendering engine. Everything goes here.
      */
     public func render(filename sourcePath: String) {
         
         // Perform setup
-        if !setupScene(path: sourcePath) {
-            return
-        }
-        
-        if !setupBuffers() {
-            return
-        }
-        
+        if !setupScene(path: sourcePath) { return }
+        if !setupBuffers() { return }
+        if !setupPipelines() { return }
+
         // Start the rendering stopwatch
         let startTime = Date.init()
         
-        // Get default library
-        guard let defaultLibrary = scene.metalDevice?.makeDefaultLibrary() else {
-            print("Unable to get defaultLibrary!")
-            return
-        }
-        
-        guard let initRayFunction = defaultLibrary.makeFunction(name: "generateInitRay") else {
-            print("Failed to fetch initRay shader method")
-            return
-        }
-        
-        guard let shadingKernelFunc = defaultLibrary.makeFunction(name: "shadingKernel") else {
-            print("Failed to fetch shading kernel method")
-            return
-        }
-        
-        guard let commandQueue = scene.metalDevice?.makeCommandQueue() else {
-            print("Unable to generate command queue")
-            return
-        }
-        
+        // Create the command buffer needed
         guard let commandBuffer = commandQueue.makeCommandBuffer() else {
             print("Unable to generate command Buffer")
             return
         }
         
         // MARK: Step 1: Generate all initial rays
-        var initRayPipeline: MTLComputePipelineState!
-        var shadingKernelPipeline: MTLComputePipelineState!
-        do {
-            initRayPipeline = try scene.metalDevice?.makeComputePipelineState(function: initRayFunction)
-            shadingKernelPipeline = try scene.metalDevice?.makeComputePipelineState(function: shadingKernelFunc)
-        } catch {
-            print("Failed to create Pipelines")
-            return
-        }
-        
         let initRayEncoder = commandBuffer.makeComputeCommandEncoder()
         initRayEncoder?.setComputePipelineState(initRayPipeline)
         initRayEncoder?.setBuffer(sceneDataBuffer, offset: 0, index: 0)
@@ -173,7 +190,8 @@ class Engine {
         // MARK: Step 2: Loop until all the rays are terminated.
         var depthCount = 0
         while depthCount != scene.maxDepth {
-                        
+            
+            // Find intersections
             scene.intersector?.encodeIntersection(
                 commandBuffer: commandBuffer,
                 intersectionType: .nearest,
@@ -184,15 +202,14 @@ class Engine {
                 rayCount: scene.pixelCount,
                 accelerationStructure: scene.accelerationStructure!)
             
-            // Shade the image using a shader
-            
+            // Compute the NEE intersection jobs
             let shadingEncoder = commandBuffer.makeComputeCommandEncoder()
-            shadingEncoder?.setComputePipelineState(shadingKernelPipeline)
+            shadingEncoder?.setComputePipelineState(neePipeline)
             shadingEncoder?.setBuffer(sceneDataBuffer, offset: 0, index: 0)
             shadingEncoder?.setBuffer(triVertexBuffer, offset: 0, index: 1)
-            shadingEncoder?.setBuffer(rayBuffer, offset: 0, index: 2)
-            shadingEncoder?.setBuffer(intersectionBuffer, offset: 0, index: 3)
-            shadingEncoder?.setBuffer(triMaterialBuffer, offset: 0, index: 4)
+            shadingEncoder?.setBuffer(triMaterialBuffer, offset: 0, index: 2)
+            shadingEncoder?.setBuffer(rayBuffer, offset: 0, index: 3)
+            shadingEncoder?.setBuffer(intersectionBuffer, offset: 0, index: 4)
             shadingEncoder?.setBuffer(outputImageBuffer, offset: 0, index: 5)
             shadingEncoder?.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
             shadingEncoder?.endEncoding()

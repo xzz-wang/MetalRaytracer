@@ -25,12 +25,23 @@ struct Material {
     simd_float3 diffuse;
     simd_float3 specular;
     simd_float3 emission;
+    simd_float3 ambient;
     
     float shininess;
     float roughness;
 };
 
-struct quadlight {
+struct DirectionalLight {
+    simd_float3 toDirection;
+    simd_float3 brightness;
+};
+
+struct PointLight {
+    simd_float3 position;
+    simd_float3 brightness;
+};
+
+struct Quadlight {
     simd_float3 a;
     simd_float3 ab;
     simd_float3 ac;
