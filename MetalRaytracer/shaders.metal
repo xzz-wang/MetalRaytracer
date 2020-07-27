@@ -10,6 +10,14 @@
 #include "ShaderTypes.h"
 using namespace metal;
 
+struct Ray {
+    float3 origin;
+    
+    // Direction the ray is traveling
+    float3 direction;
+    
+    simd_float3 color;
+};
 
 kernel void generateInitRay(simd_uint2 idx2 [[thread_position_in_grid]],
                             constant SceneData & scene,
@@ -31,6 +39,8 @@ inline RGBData float3ToRGB(simd_float3 value) {
     return data;
 }
 
+
+
 kernel void neeKernel(simd_uint2 idx2 [[thread_position_in_grid]],
                           constant SceneData & scene,
                           constant simd_float3 * vertexBuffer,
@@ -42,7 +52,7 @@ kernel void neeKernel(simd_uint2 idx2 [[thread_position_in_grid]],
     int index = idx2.x + scene.imageSize.x * idx2.y;
     
     Intersection hit = intersections[index];
-    Ray ray = rays[index];
+    //Ray ray = rays[index];
     
     // Check if there's an intersection
     if (hit.distance < 0) {
@@ -62,4 +72,11 @@ kernel void neeKernel(simd_uint2 idx2 [[thread_position_in_grid]],
 }
 
 
+
+kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
+                          constant SceneData & scene,
+                          constant simd_float3 * vertexBuffer,
+                          constant Material * triMaterials) {
+    
+}
 

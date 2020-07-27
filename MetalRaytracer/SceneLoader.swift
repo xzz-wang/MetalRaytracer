@@ -106,6 +106,8 @@ class SceneLoader {
         
         // Make the MPSIntersector
         scene.intersector = MPSRayIntersector.init(device: device)
+        scene.intersector?.rayDataType = .originDirection
+        scene.intersector?.rayStride = rayStride
     }
 
     

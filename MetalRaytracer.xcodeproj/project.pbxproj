@@ -44,6 +44,7 @@
 		B0BBC5E224B18578002B2EBD /* SceneLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneLoader.swift; sourceTree = "<group>"; };
 		B0BBC5E424B18B21002B2EBD /* MML.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MML.swift; sourceTree = "<group>"; };
 		B0E5566224A5C76E00030471 /* Film.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Film.swift; sourceTree = "<group>"; };
+		B0FF8A8024CF487A005B70DE /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +70,7 @@
 		B06DF873249EC29300BD8145 = {
 			isa = PBXGroup;
 			children = (
+				B0FF8A8024CF487A005B70DE /* README.md */,
 				B06DF87E249EC29300BD8145 /* MetalRaytracer */,
 				B06DF87D249EC29300BD8145 /* Products */,
 				B046C00D24A97E2100D135A1 /* Frameworks */,

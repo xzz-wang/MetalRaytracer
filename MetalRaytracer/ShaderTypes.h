@@ -11,7 +11,6 @@
 
 // Types
 
-typedef MPSRayOriginDirection Ray;
 typedef MPSIntersectionDistancePrimitiveIndexCoordinates Intersection;
 
 struct Camera {
@@ -52,6 +51,10 @@ struct Quadlight {
 struct SceneData {
     struct Camera camera;
     simd_int2 imageSize;
+    int quadLightCount;
+    int directLightCount;
+    int pointLightCount;
+    bool neeOn;
 };
 
 struct RGBData {

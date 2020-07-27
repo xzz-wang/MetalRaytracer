@@ -27,9 +27,11 @@ class Engine {
     private var triVertexBuffer: MTLBuffer!
     private var triMaterialBuffer: MTLBuffer!
 
-    // InitRays
+    // Other buffers
     private var rayBuffer: MTLBuffer!
     private var intersectionBuffer: MTLBuffer!
+    private var shadowRayBuffer: MTLBuffer!
+    private var shadowIntersectionBuffer: MTLBuffer!
     private var outputImageBuffer: MTLBuffer!
     
     
@@ -72,7 +74,7 @@ class Engine {
         
         
         // Initialize RayBuffer
-        if let buffer = scene.metalDevice!.makeBuffer(length: length * MemoryLayout<Ray>.size, options: .storageModeShared) {
+        if let buffer = scene.metalDevice!.makeBuffer(length: length * rayStride, options: .storageModeShared) {
             rayBuffer = buffer
         } else {
             print("Unable to initialize rayBuffer!")
@@ -137,9 +139,16 @@ class Engine {
             return false
         }
         
+        // Pipeline 3: Shading
+        guard let shadingKernelFunc = defaultLibrary.makeFunction(name: "shadingKernel") else {
+            print("Failed to fetch shading kernel method")
+            return false
+        }
+        
         do {
             initRayPipeline = try scene.metalDevice?.makeComputePipelineState(function: initRayFunction)
             neePipeline = try scene.metalDevice?.makeComputePipelineState(function: neeKernalFunc)
+            shadingPipeline = try scene.metalDevice?.makeComputePipelineState(function: shadingKernelFunc)
         } catch {
             print("Failed to create Pipelines")
             return false
@@ -180,14 +189,13 @@ class Engine {
         initRayEncoder?.setComputePipelineState(initRayPipeline)
         initRayEncoder?.setBuffer(sceneDataBuffer, offset: 0, index: 0)
         initRayEncoder?.setBuffer(rayBuffer, offset: 0, index: 1)
+        
         let threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
-        let threadgroups = MTLSize(width: (Int(scene.imageSize.x)  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
-                                   height: (Int(scene.imageSize.y) + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height,
-                                   depth: 1);
-        initRayEncoder?.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup) // Copied from example
+        let threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
+        initRayEncoder?.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
         initRayEncoder?.endEncoding()
                         
-        // MARK: Step 2: Loop until all the rays are terminated.
+        // MARK: Step 2: Loop for different layers.
         var depthCount = 0
         while depthCount != scene.maxDepth {
             
@@ -211,10 +219,12 @@ class Engine {
             shadingEncoder?.setBuffer(rayBuffer, offset: 0, index: 3)
             shadingEncoder?.setBuffer(intersectionBuffer, offset: 0, index: 4)
             shadingEncoder?.setBuffer(outputImageBuffer, offset: 0, index: 5)
-            shadingEncoder?.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
+            shadingEncoder?.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
             shadingEncoder?.endEncoding()
             
-            depthCount += 1
+            //
+            
+            //depthCount += 1
             depthCount = scene.maxDepth
         }
         

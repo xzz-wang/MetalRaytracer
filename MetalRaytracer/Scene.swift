@@ -10,6 +10,7 @@ import Foundation
 import simd
 import MetalPerformanceShaders
 
+let rayStride = 48 // 3 * 16 due to alignment of float3
 
 class Scene {
     var debugDescription: String {
@@ -62,6 +63,12 @@ class Scene {
     }
     
     public func getSceneData() -> SceneData {
-        return SceneData(camera: camera!, imageSize: imageSize)
+        var data = SceneData()
+        data.camera = camera!
+        data.imageSize = imageSize
+        data.pointLightCount = Int32(pointLights.count)
+        data.directLightCount = Int32(directionalLights.count)
+        data.quadLightCount = Int32(quadLights.count)
+        return data
     }
 }
