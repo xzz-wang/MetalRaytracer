@@ -166,6 +166,30 @@ kernel void neeKernel(simd_uint2 idx2 [[thread_position_in_grid]],
 }
 
 
+/**
+ Returns the value of BRDF with the given information.
+ */
+inline float3 evaluate(Material material, float3 inOmega, float3 outOmega, float3 normal, SceneData scene) {
+    // MARK: Add more supported brdf here
+    
+    float3 r = reflect(-outOmega, normal);
+    float3 f = material.diffuse / M_PI_F;
+    f += material.specular / M_PI_2_F * (material.shininess + 2) * pow(dot(r, inOmega), material.shininess);
+    
+    return f;
+}
+
+/**
+ Conpute Phong model contribution
+ */
+inline float3 computeShading(Material material, float3 inOmega, float3 toLight, float3 normal, float3 lightIntensity) {
+    float3 h = normalize(inOmega + toLight);
+    float3 diffuseReflectance = material.diffuse * max(0.0f, dot(normal, toLight));
+    float3 specularReflectance = material.specular * pow(max(dot(normal, h), 0.0f), material.shininess);
+    return lightIntensity * (diffuseReflectance + specularReflectance);
+}
+
+
 // This kernal use the shadow rays as well as surface information to shade the image.
 kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
                         constant SceneData & scene [[buffer(0)]],
@@ -186,9 +210,6 @@ kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
     int index = idx2.x + scene.imageSize.x * idx2.y;
     
     Intersection hit = intersections[index];
-    Ray ray = rays[index];
-    Material hitMaterial = triMaterials[hit.primitiveIndex];
-    
     // Check if there's an intersection
     if (hit.distance < 0) {
         return;
@@ -199,19 +220,43 @@ kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
     simd_float3 v3 = vertexBuffer[3 * hit.primitiveIndex + 2];
     
     simd_float3 hitPosition = v1 * hit.coordinates.x + v2 * hit.coordinates.y + v3 * (1.0f - hit.coordinates.x - hit.coordinates.y);
+    simd_float3 hitNormal = normalize(cross(v2 - v1, v3 - v1));
+    Ray ray = rays[index];
+    Material hitMaterial = triMaterials[hit.primitiveIndex];
     
     int shadowRayIndex = index * (scene.directLightCount + scene.pointLightCount + scene.lightsamples * scene.quadLightCount);
+    simd_float3 outputColor = simd_float3(0.0, 0.0, 0.0);
     
     // Calculate Direct Light contribution
-    
+    for (int i = 0; i < scene.directLightCount; i++) {
+        Intersection thisShadowIntersection = shadowIntersections[shadowRayIndex];
+        Ray thisShadowRay = shadowRays[shadowRayIndex++];
+        DirectionalLight thisLight = directionalLights[i];
+
+        // Check if it is occluded
+        if (thisShadowIntersection.distance < 0) {
+            outputColor += computeShading(hitMaterial, -ray.direction, thisShadowRay.direction, hitNormal, thisLight.brightness);
+        }
+    }
+
     // Calculate Point Light contribution
+    for (int i = 0; i < scene.pointLightCount; i++) {
+        Intersection thisShadowIntersection = shadowIntersections[shadowRayIndex];
+        Ray thisShadowRay = shadowRays[shadowRayIndex++];
+        PointLight thisLight = pointLights[i];
+
+        // Check if it is occluded
+        if (thisShadowIntersection.distance < 0) {
+            outputColor += computeShading(hitMaterial, -ray.direction, thisShadowRay.direction, hitNormal, thisLight.brightness);
+        }
+    }
     
-    // Calculate Quadlight contribution
+    // TODO: Calculate Quadlight contribution
     
-    // Calculate next level
+    // TODO: Calculate next level
 
 
-    simd_float3 outputColor = hitMaterial.emission;
+//    outputColor = hitMaterial.diffuse;
 
     outputBuffer[index] = float3ToRGB(outputColor);
 }

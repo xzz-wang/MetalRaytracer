@@ -63,7 +63,7 @@ class SceneLoader {
             
             // Check for comments and empty lines
             let thisCommand = args[0]
-            if thisCommand == "#" { continue }
+            if thisCommand.prefix(1) == "#" { continue }
             
             loadCommand(args: args)
         }
