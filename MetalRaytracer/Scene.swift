@@ -10,7 +10,7 @@ import Foundation
 import simd
 import MetalPerformanceShaders
 
-let rayStride = 48 // 3 * 16 due to alignment of float3
+let rayStride = 48 // Due to the Ray struct we are using
 
 class Scene {
     var debugDescription: String {
@@ -31,6 +31,7 @@ class Scene {
     
     public var outputName: String = "output.png"
     public var spp: Int = 1
+    public var lightsamples: Int = 1
     
     public var camera: Camera?
     
@@ -47,9 +48,42 @@ class Scene {
     
     // Part four: Lights
     public var directionalLights: [DirectionalLight] = []
-    public var pointLights: [PointLight] = []
-    public var quadLights: [Quadlight] = []
+    private var directionalLightPadded = false
+    public var directionalLightsCount: Int {
+        let count = directionalLights.count
+        if directionalLightPadded {
+            return count - 1
+        } else {
+            return count
+        }
+    }
     
+    public var pointLights: [PointLight] = []
+    private var pointLightPadded = false
+    public var pointLightsCount: Int {
+        let count = pointLights.count
+        if pointLightPadded {
+            return count - 1
+        } else {
+            return count
+        }
+    }
+    
+    public var quadLights: [Quadlight] = []
+    private var quadLightPadded = false
+    public var quadLightsCount: Int {
+        let count = quadLights.count
+        if quadLightPadded {
+            return count - 1
+        } else {
+            return count
+        }
+    }
+    
+    public var shadowRayPerPixel: Int {
+        return directionalLightsCount + pointLightsCount + quadLightsCount * lightsamples
+    }
+
     
     public func isComplete() -> Bool {
         if (camera != nil) &&
@@ -62,13 +96,37 @@ class Scene {
         return false
     }
     
+    public func makeLightPlaceholders () {
+        // Add an invisible light if there's no light of such type
+        if directionalLights.count == 0 {
+            let newLight = DirectionalLight(toDirection: simd_float3(1.0, 0.0, 0.0), brightness: simd_float3(0.0, 0.0, 0.0))
+            directionalLights.append(newLight)
+            directionalLightPadded = true
+        }
+        
+        if pointLights.count == 0 {
+            let newLight = PointLight(position: simd_float3(0.0, 0.0, 0.0), brightness: simd_float3(0.0, 0.0, 0.0))
+            pointLights.append(newLight)
+            pointLightPadded = true
+        }
+        
+        if quadLights.count == 0 {
+            let newLight = Quadlight(a: simd_float3(0.0, 0.0, 0.0), ab: simd_float3(0.0, 0.0, 0.0), ac: simd_float3(0.0, 0.0, 0.0), intensity: simd_float3(0.0, 0.0, 0.0))
+            quadLights.append(newLight)
+            quadLightPadded = true
+        }
+
+    }
+    
     public func getSceneData() -> SceneData {
         var data = SceneData()
         data.camera = camera!
         data.imageSize = imageSize
-        data.pointLightCount = Int32(pointLights.count)
-        data.directLightCount = Int32(directionalLights.count)
-        data.quadLightCount = Int32(quadLights.count)
+        data.pointLightCount = Int32(pointLightsCount)
+        data.directLightCount = Int32(directionalLightsCount)
+        data.quadLightCount = Int32(quadLightsCount)
+        data.lightsamples = Int32(lightsamples)
+        data.shadowRayPerPixel = Int32(shadowRayPerPixel)
         return data
     }
 }

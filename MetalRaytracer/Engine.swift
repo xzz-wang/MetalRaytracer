@@ -26,6 +26,10 @@ class Engine {
     private var sceneDataBuffer: MTLBuffer!
     private var triVertexBuffer: MTLBuffer!
     private var triMaterialBuffer: MTLBuffer!
+    
+    private var directionalLightBuffer: MTLBuffer!
+    private var pointLightBuffer: MTLBuffer!
+    private var quadLightBuffer: MTLBuffer!
 
     // Other buffers
     private var rayBuffer: MTLBuffer!
@@ -113,6 +117,27 @@ class Engine {
             return false
         }
         
+        // Initialize ShadowRayBuffers
+        let shadowRayCount = scene.pixelCount * scene.shadowRayPerPixel
+        if let rb = scene.metalDevice!.makeBuffer(length: shadowRayCount * rayStride, options: .storageModeShared),
+            let ib = scene.metalDevice!.makeBuffer(length: shadowRayCount * MemoryLayout<Intersection>.size, options: .storageModeShared) {
+            shadowRayBuffer = rb
+            shadowIntersectionBuffer = ib
+        }
+        
+        // Initialize lightBuffers
+        if let dirBuffer = scene.metalDevice!.makeBuffer(bytes: scene.directionalLights, length: scene.directionalLights.count * MemoryLayout<DirectionalLight>.size, options: .storageModeShared),
+            let pointBuffer = scene.metalDevice!.makeBuffer(bytes: scene.pointLights, length: scene.pointLights.count * MemoryLayout<PointLight>.size, options: .storageModeShared),
+            let quadBuffer = scene.metalDevice!.makeBuffer(bytes: scene.quadLights, length: scene.quadLights.count * MemoryLayout<Quadlight>.size, options: .storageModeShared){
+            directionalLightBuffer = dirBuffer
+            pointLightBuffer = pointBuffer
+            quadLightBuffer = quadBuffer
+        } else {
+            print("Unable to generate light buffer")
+            return false
+        }
+
+        
         return true
     }
     
@@ -174,6 +199,8 @@ class Engine {
         if !setupScene(path: sourcePath) { return }
         if !setupBuffers() { return }
         if !setupPipelines() { return }
+        
+        let sceneData = scene.getSceneData()
 
         // Start the rendering stopwatch
         let startTime = Date.init()
@@ -211,20 +238,50 @@ class Engine {
                 accelerationStructure: scene.accelerationStructure!)
             
             // Compute the NEE intersection jobs
+            let neeEncoder = commandBuffer.makeComputeCommandEncoder()
+            neeEncoder?.setComputePipelineState(neePipeline)
+            let neeBuffers = [sceneDataBuffer,
+                              triVertexBuffer,
+                              directionalLightBuffer,
+                              pointLightBuffer,
+                              quadLightBuffer,
+                              rayBuffer,
+                              intersectionBuffer,
+                              shadowRayBuffer, triMaterialBuffer, outputImageBuffer]
+            neeEncoder?.setBuffers(neeBuffers, offsets: Array(repeating: 0, count: 10), range: 0..<10)
+            neeEncoder?.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+            neeEncoder?.endEncoding()
+            
+            // Find shadow ray intersections
+            scene.intersector?.encodeIntersection(
+                commandBuffer: commandBuffer,
+                intersectionType: .any,
+                rayBuffer: shadowRayBuffer,
+                rayBufferOffset: 0,
+                intersectionBuffer: shadowIntersectionBuffer,
+                intersectionBufferOffset: 0,
+                rayCount: Int(sceneData.shadowRayPerPixel) * scene.pixelCount,
+                accelerationStructure: scene.accelerationStructure!)
+
+            // Shade this layer. Generate next layer samples.
             let shadingEncoder = commandBuffer.makeComputeCommandEncoder()
-            shadingEncoder?.setComputePipelineState(neePipeline)
-            shadingEncoder?.setBuffer(sceneDataBuffer, offset: 0, index: 0)
-            shadingEncoder?.setBuffer(triVertexBuffer, offset: 0, index: 1)
-            shadingEncoder?.setBuffer(triMaterialBuffer, offset: 0, index: 2)
-            shadingEncoder?.setBuffer(rayBuffer, offset: 0, index: 3)
-            shadingEncoder?.setBuffer(intersectionBuffer, offset: 0, index: 4)
-            shadingEncoder?.setBuffer(outputImageBuffer, offset: 0, index: 5)
+            shadingEncoder?.setComputePipelineState(shadingPipeline)
+            let shadingBuffers = [sceneDataBuffer,
+                                  triVertexBuffer,
+                                  directionalLightBuffer,
+                                  pointLightBuffer,
+                                  quadLightBuffer,
+                                  triMaterialBuffer,
+                                  rayBuffer,
+                                  intersectionBuffer,
+                                  shadowRayBuffer,
+                                  shadowIntersectionBuffer,
+                                  outputImageBuffer]
+            shadingEncoder?.setBuffers(shadingBuffers, offsets: Array(repeating: 0, count: 11), range: 0..<11)
             shadingEncoder?.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
             shadingEncoder?.endEncoding()
-            
-            //
-            
-            //depthCount += 1
+
+            depthCount += 1
             depthCount = scene.maxDepth
         }
         

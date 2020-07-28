@@ -75,6 +75,8 @@ class SceneLoader {
         scene.triVerts = triVerts
         scene.triMaterial = triMaterial
         
+        scene.makeLightPlaceholders()
+        
         return scene
     }
     
@@ -106,7 +108,7 @@ class SceneLoader {
         
         // Make the MPSIntersector
         scene.intersector = MPSRayIntersector.init(device: device)
-        scene.intersector?.rayDataType = .originDirection
+        scene.intersector?.rayDataType = .originMaskDirectionMaxDistance
         scene.intersector?.rayStride = rayStride
     }
 
@@ -138,6 +140,8 @@ class SceneLoader {
             if let value = Int(args[1]) {
                 scene.spp = value
             }
+        } else if command == "lightsample" {
+            
             
         // MARK: Part 2: Camera and Geometry
         } else if command == "camera" {

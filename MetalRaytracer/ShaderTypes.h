@@ -54,6 +54,8 @@ struct SceneData {
     int quadLightCount;
     int directLightCount;
     int pointLightCount;
+    int lightsamples;
+    int shadowRayPerPixel;
     bool neeOn;
 };
 
