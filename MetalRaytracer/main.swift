@@ -15,7 +15,7 @@ import CoreGraphics
 
 let inputFileName = "./hw1/scene1.test"
 let engine = Engine()
-engine.render(filename: "./hw1/scene4-emission.test")
+engine.render(filename: "./hw1/scene6.test")
 
 
 

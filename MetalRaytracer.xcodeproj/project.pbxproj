@@ -32,6 +32,50 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B000270F24D8EA3500780056 /* analytic.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = analytic.test; sourceTree = "<group>"; };
+		B000271024D8EA3500780056 /* direct9.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = direct9.test; sourceTree = "<group>"; };
+		B000271124D8EA3500780056 /* direct3x3.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = direct3x3.test; sourceTree = "<group>"; };
+		B000271224D8EA3500780056 /* cornell.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cornell.test; sourceTree = "<group>"; };
+		B000271324D8EA3500780056 /* dragon.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dragon.test; sourceTree = "<group>"; };
+		B000271424D8EA3500780056 /* sphere.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sphere.test; sourceTree = "<group>"; };
+		B000271624D8EA3500780056 /* cornellCosine.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cornellCosine.test; sourceTree = "<group>"; };
+		B000271724D8EA3500780056 /* mis.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mis.test; sourceTree = "<group>"; };
+		B000271824D8EA3500780056 /* dragon.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dragon.test; sourceTree = "<group>"; };
+		B000271924D8EA3500780056 /* cornellBRDF.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cornellBRDF.test; sourceTree = "<group>"; };
+		B000271B24D8EA3500780056 /* cornellSimple.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cornellSimple.test; sourceTree = "<group>"; };
+		B000271C24D8EA3500780056 /* cornellRR.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cornellRR.test; sourceTree = "<group>"; };
+		B000271D24D8EA3500780056 /* dragon.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dragon.test; sourceTree = "<group>"; };
+		B000271E24D8EA3500780056 /* cornellNEE.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cornellNEE.test; sourceTree = "<group>"; };
+		B000272024D8EA3500780056 /* scene4-specular.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "scene4-specular.test"; sourceTree = "<group>"; };
+		B000272124D8EA3500780056 /* scene5.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = scene5.test; sourceTree = "<group>"; };
+		B000272224D8EA3500780056 /* scene4-emission.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "scene4-emission.test"; sourceTree = "<group>"; };
+		B000272324D8EA3500780056 /* scene2.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = scene2.test; sourceTree = "<group>"; };
+		B000272424D8EA3500780056 /* scene4-diffuse.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "scene4-diffuse.test"; sourceTree = "<group>"; };
+		B000272524D8EA3500780056 /* scene3.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = scene3.test; sourceTree = "<group>"; };
+		B000272624D8EA3500780056 /* scene4-ambient.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "scene4-ambient.test"; sourceTree = "<group>"; };
+		B000272724D8EA3500780056 /* scene1.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = scene1.test; sourceTree = "<group>"; };
+		B000272824D8EA3500780056 /* scene6.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = scene6.test; sourceTree = "<group>"; };
+		B000272924D8EA3500780056 /* scene7.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = scene7.test; sourceTree = "<group>"; };
+		B000272A24D8EA3500780056 /* inputTest.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = inputTest.test; sourceTree = "<group>"; };
+		B000272C24D8EA3500780056 /* drink.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = drink.obj; sourceTree = "<group>"; };
+		B000272D24D8EA3500780056 /* refraction-brdf.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "refraction-brdf.test"; sourceTree = "<group>"; };
+		B000272E24D8EA3500780056 /* volumetric-dragon.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "volumetric-dragon.test"; sourceTree = "<group>"; };
+		B000272F24D8EA3500780056 /* refraction-ggx.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "refraction-ggx.test"; sourceTree = "<group>"; };
+		B000273024D8EA3500780056 /* photon-refraction-simple.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "photon-refraction-simple.test"; sourceTree = "<group>"; };
+		B000273124D8EA3500780056 /* hero.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = hero.test; sourceTree = "<group>"; };
+		B000273224D8EA3500780056 /* BOTTLE.stp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BOTTLE.stp; sourceTree = "<group>"; };
+		B000273324D8EA3500780056 /* refraction-cornell.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "refraction-cornell.test"; sourceTree = "<group>"; };
+		B000273424D8EA3500780056 /* photon-refraction-cornell.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "photon-refraction-cornell.test"; sourceTree = "<group>"; };
+		B000273524D8EA3500780056 /* refraction-simple.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "refraction-simple.test"; sourceTree = "<group>"; };
+		B000273624D8EA3500780056 /* dof.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dof.test; sourceTree = "<group>"; };
+		B000273724D8EA3500780056 /* glass.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = glass.obj; sourceTree = "<group>"; };
+		B000273824D8EA3500780056 /* dragon.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dragon.test; sourceTree = "<group>"; };
+		B000273924D8EA3500780056 /* head.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = head.obj; sourceTree = "<group>"; };
+		B000273A24D8EA3500780056 /* photon-cornell.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "photon-cornell.test"; sourceTree = "<group>"; };
+		B000273B24D8EA3500780056 /* dof-ggx.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "dof-ggx.test"; sourceTree = "<group>"; };
+		B000273C24D8EA3500780056 /* BOTTLE_high.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BOTTLE_high.obj; sourceTree = "<group>"; };
+		B000273D24D8EA3500780056 /* obj.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = obj.test; sourceTree = "<group>"; };
+		B000273E24D8EA3500780056 /* BOTTLE MID POLY.fbx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BOTTLE MID POLY.fbx"; sourceTree = "<group>"; };
 		B008D1D024B6DF4B00D4C67E /* Scene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scene.swift; sourceTree = "<group>"; };
 		B060C86924B82E22004BB4ED /* MetalPerformanceShaders.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalPerformanceShaders.framework; path = System/Library/Frameworks/MetalPerformanceShaders.framework; sourceTree = SDKROOT; };
 		B06CD10924C178EB00E155B0 /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
@@ -59,6 +103,97 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B000270D24D8EA3500780056 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				B000270E24D8EA3500780056 /* hw2 */,
+				B000271524D8EA3500780056 /* hw4 */,
+				B000271A24D8EA3500780056 /* hw3 */,
+				B000271F24D8EA3500780056 /* hw1 */,
+				B000272A24D8EA3500780056 /* inputTest.test */,
+				B000272B24D8EA3500780056 /* final */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		B000270E24D8EA3500780056 /* hw2 */ = {
+			isa = PBXGroup;
+			children = (
+				B000270F24D8EA3500780056 /* analytic.test */,
+				B000271024D8EA3500780056 /* direct9.test */,
+				B000271124D8EA3500780056 /* direct3x3.test */,
+				B000271224D8EA3500780056 /* cornell.test */,
+				B000271324D8EA3500780056 /* dragon.test */,
+				B000271424D8EA3500780056 /* sphere.test */,
+			);
+			path = hw2;
+			sourceTree = "<group>";
+		};
+		B000271524D8EA3500780056 /* hw4 */ = {
+			isa = PBXGroup;
+			children = (
+				B000271624D8EA3500780056 /* cornellCosine.test */,
+				B000271724D8EA3500780056 /* mis.test */,
+				B000271824D8EA3500780056 /* dragon.test */,
+				B000271924D8EA3500780056 /* cornellBRDF.test */,
+			);
+			path = hw4;
+			sourceTree = "<group>";
+		};
+		B000271A24D8EA3500780056 /* hw3 */ = {
+			isa = PBXGroup;
+			children = (
+				B000271B24D8EA3500780056 /* cornellSimple.test */,
+				B000271C24D8EA3500780056 /* cornellRR.test */,
+				B000271D24D8EA3500780056 /* dragon.test */,
+				B000271E24D8EA3500780056 /* cornellNEE.test */,
+			);
+			path = hw3;
+			sourceTree = "<group>";
+		};
+		B000271F24D8EA3500780056 /* hw1 */ = {
+			isa = PBXGroup;
+			children = (
+				B000272024D8EA3500780056 /* scene4-specular.test */,
+				B000272124D8EA3500780056 /* scene5.test */,
+				B000272224D8EA3500780056 /* scene4-emission.test */,
+				B000272324D8EA3500780056 /* scene2.test */,
+				B000272424D8EA3500780056 /* scene4-diffuse.test */,
+				B000272524D8EA3500780056 /* scene3.test */,
+				B000272624D8EA3500780056 /* scene4-ambient.test */,
+				B000272724D8EA3500780056 /* scene1.test */,
+				B000272824D8EA3500780056 /* scene6.test */,
+				B000272924D8EA3500780056 /* scene7.test */,
+			);
+			path = hw1;
+			sourceTree = "<group>";
+		};
+		B000272B24D8EA3500780056 /* final */ = {
+			isa = PBXGroup;
+			children = (
+				B000272C24D8EA3500780056 /* drink.obj */,
+				B000272D24D8EA3500780056 /* refraction-brdf.test */,
+				B000272E24D8EA3500780056 /* volumetric-dragon.test */,
+				B000272F24D8EA3500780056 /* refraction-ggx.test */,
+				B000273024D8EA3500780056 /* photon-refraction-simple.test */,
+				B000273124D8EA3500780056 /* hero.test */,
+				B000273224D8EA3500780056 /* BOTTLE.stp */,
+				B000273324D8EA3500780056 /* refraction-cornell.test */,
+				B000273424D8EA3500780056 /* photon-refraction-cornell.test */,
+				B000273524D8EA3500780056 /* refraction-simple.test */,
+				B000273624D8EA3500780056 /* dof.test */,
+				B000273724D8EA3500780056 /* glass.obj */,
+				B000273824D8EA3500780056 /* dragon.test */,
+				B000273924D8EA3500780056 /* head.obj */,
+				B000273A24D8EA3500780056 /* photon-cornell.test */,
+				B000273B24D8EA3500780056 /* dof-ggx.test */,
+				B000273C24D8EA3500780056 /* BOTTLE_high.obj */,
+				B000273D24D8EA3500780056 /* obj.test */,
+				B000273E24D8EA3500780056 /* BOTTLE MID POLY.fbx */,
+			);
+			path = final;
+			sourceTree = "<group>";
+		};
 		B046C00D24A97E2100D135A1 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -71,6 +206,7 @@
 			isa = PBXGroup;
 			children = (
 				B0FF8A8024CF487A005B70DE /* README.md */,
+				B000270D24D8EA3500780056 /* Tests */,
 				B06DF87E249EC29300BD8145 /* MetalRaytracer */,
 				B06DF87D249EC29300BD8145 /* Products */,
 				B046C00D24A97E2100D135A1 /* Frameworks */,

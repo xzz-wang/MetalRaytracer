@@ -1,0 +1,4 @@
+# This is a comment
+maxDepth 5
+size 400 600
+output file.png
