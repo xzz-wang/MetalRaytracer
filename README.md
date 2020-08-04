@@ -3,6 +3,10 @@ An offline retracer built on Metal frameworks.
 
 **Work in Progress...**
 
+### Previous Work
+This project is my CSE 168's course project on a new platform. Details regarding my class project can be found here: [CSE 168 Final Project](https://bit.ly/2ZIKlvv)
+
+
 ### Input File Format Documentation
 
 **Rendering Specification**
