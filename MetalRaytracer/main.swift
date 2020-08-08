@@ -13,9 +13,9 @@ import CoreGraphics
 
 // TODO: Parse the input filename from command line.
 
-let inputFileName = "./hw1/scene1.test"
+let inputFileName = "../Tests/hw1/scene6.test"
 let engine = Engine()
-engine.render(filename: "./hw1/scene6.test")
+engine.render(filename: inputFileName)
 
 
 

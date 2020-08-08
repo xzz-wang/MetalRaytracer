@@ -65,8 +65,15 @@ class SceneLoader {
             let thisCommand = args[0]
             if thisCommand.prefix(1) == "#" { continue }
             
+            // Debugging purpose only
+            if thisCommand == "END" {
+                break;
+            }
+            
             loadCommand(args: args)
         }
+        
+        print(curTransform)
         
         setupCamera()
         
@@ -140,8 +147,10 @@ class SceneLoader {
             if let value = Int(args[1]) {
                 scene.spp = value
             }
-        } else if command == "lightsample" {
-            
+        } else if command == "lightsamples" {
+            if let value = Int(args[1]) {
+                scene.lightsamples = value
+            }
             
         // MARK: Part 2: Camera and Geometry
         } else if command == "camera" {
@@ -244,7 +253,7 @@ class SceneLoader {
                     scene.pointLights.append(newLight)
                 }
             }
-        } else if command == "quadlight" {
+        } else if command == "quadLight" {
             var light = Quadlight()
             if let a = loadVec3(args: args, startAt: 1), let ab = loadVec3(args: args, startAt: 4), let ac = loadVec3(args: args, startAt: 7), let rgb = loadVec3(args: args, startAt: 10) {
                 light.a = a

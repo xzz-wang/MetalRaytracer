@@ -2,6 +2,12 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:../MetalRaytracer/loki_header.metal">
+   </FileRef>
+   <FileRef
+      location = "group:../MetalRaytracer/loki.metal">
+   </FileRef>
+   <FileRef
       location = "self:">
    </FileRef>
 </Workspace>

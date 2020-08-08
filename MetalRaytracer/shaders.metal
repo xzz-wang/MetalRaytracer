@@ -10,6 +10,7 @@
 
 #include <metal_stdlib>
 #include "ShaderTypes.h"
+#include "loki_header.metal"
 using namespace metal;
 
 // Represents a three dimensional ray which will be intersected with the scene. The ray type
@@ -23,41 +24,6 @@ struct Ray {
     
     float3 color;
 };
-
-
-
-constant unsigned int primes[] = {
-    2,   3,  5,  7,
-    11, 13, 17, 19,
-    23, 29, 31, 37,
-    41, 43, 47, 53,
-};
-
-// Algorithm copied from apple's example
-/**
- Returns the i'th element of the Halton sequence using the d'th prime number as a
- base. The Halton sequence is a "low discrepency" sequence: the values appear
- random but are more evenly distributed then a purely random sequence. Each random
- value used to render the image should use a different independent dimension 'd',
- and each sample (frame) should use a different index 'i'. To decorrelate each
- pixel, a random offset can be applied to 'i'.
- */
-float halton(unsigned int i, unsigned int d) {
-    unsigned int b = primes[d];
-    
-    float f = 1.0f;
-    float invB = 1.0f / b;
-    
-    float r = 0;
-    
-    while (i > 0) {
-        f = f * invB;
-        r = r + f * (i % b);
-        i = i / b;
-    }
-    
-    return r;
-}
 
 
 
@@ -81,7 +47,11 @@ kernel void generateInitRay(simd_uint2 idx2 [[thread_position_in_grid]],
 
 
 inline RGBData float3ToRGB(simd_float3 value) {
-    RGBData data = {static_cast<uint8_t>(value.x * 255), static_cast<uint8_t>(value.y * 255), static_cast<uint8_t>(value.z * 255), 255};
+    value = value * 255;
+    uint8_t r = static_cast<uint8_t>(value.x > 255.0 ? 255 : value.x);
+    uint8_t g = static_cast<uint8_t>(value.x > 255.0 ? 255 : value.y);
+    uint8_t b = static_cast<uint8_t>(value.x > 255.0 ? 255 : value.z);
+    RGBData data = {r, g, b, 255};
     return data;
 }
 
@@ -133,19 +103,23 @@ kernel void neeKernel(simd_uint2 idx2 [[thread_position_in_grid]],
         float3 toLight = pointLights[i].position - hitPosition;
         Ray thisRay;
         thisRay.direction = normalize(toLight);
-        thisRay.maxDistance = length(toLight) - EPSILON;
+        thisRay.maxDistance = length(toLight) - EPSILON * 2;
         thisRay.origin = hitPosition + EPSILON * thisRay.direction;
         shadowRays[shadowRayIndex++] = thisRay;
     }
-
+    
     // Generate samples for quadLight
+    // Using stratification
     int root = sqrt(float(scene.lightsamples));
     for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
         for (int i = 0; i < root; i++) {
             for (int j = 0; j < root; j++) {
                 //Generate two random numbers
-                float x = halton(index, 0);
-                float y = halton(index, 1);
+                float one = 1.0f;
+                Loki random1 = Loki(index, i, j);
+                float x = modf(random1.rand(), one);
+                Loki random2 = Loki(index, i, j+1);
+                float y = modf(random2.rand(), one);
 
                 // Stratify the sampling
                 Quadlight light = quadLights[lightID];
@@ -252,7 +226,54 @@ kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
     }
     
     // TODO: Calculate Quadlight contribution
-    
+//    int root = sqrt(float(scene.lightsamples));
+//    for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
+//
+//        Quadlight thisLight = quadLights[lightID];
+//        simd_float3 lightNormal = normalize(cross(thisLight.ac, thisLight.ab));
+//        float lightArea = length(cross(thisLight.ab, thisLight.ac));
+//        simd_float3 thisLightColor = simd_float3(0.0, 0.0, 0.0);
+//
+//        for (int i = 0; i < root; i++) {
+//            for (int j = 0; j < root; j++) {
+//                Intersection thisShadowIntersection = shadowIntersections[shadowRayIndex];
+//                Ray thisShadowRay = shadowRays[shadowRayIndex++];
+//
+//                // Check if this ray is occluded
+//                if (thisShadowIntersection.distance < 0) {
+//                    simd_float3 inOmega = thisShadowRay.direction;
+//                    simd_float3 outOmega = -ray.direction;
+//                    float proj = dot(outOmega, hitNormal);
+//                    simd_float3 r = 2.0 * simd_float3(proj, proj, proj) * hitNormal - outOmega;
+//
+//                    simd_float3 f;
+//
+////                    if (hitMaterial.brdf == Phong)
+////                    {
+////                        f = hitMaterial.diffuse / PI +
+////                        hitMaterial.specular / TWO_PI * (hitMaterial.shininess + 2) * pow(glm::dot(r, inOmega), hitMaterial.shininess);
+////                    } else if (hitMaterial.brdf == GGX) {
+////                        BRDF_GGX_Importance brdfObj;
+////                        brdfObj.setMaterial(hitMaterial);
+////                        f = brdfObj.evaluate(inOmega, outOmega, hitNormal);
+////                    }
+//
+//                    f = hitMaterial.diffuse / M_PI_F + hitMaterial.specular / M_PI_2_F * (hitMaterial.shininess + 2) * pow(dot(r, inOmega), hitMaterial.shininess);
+//
+//                    float n_w = max(0.0, dot(hitNormal, inOmega));
+//
+//                    float dist_squared = thisShadowRay.maxDistance * thisShadowRay.maxDistance;
+//                    float n_l_w = max(0.0, dot(lightNormal, -inOmega)) / dist_squared;
+//
+//                    thisLightColor += f * n_w * n_l_w;
+//                }
+//            }
+//        }
+//
+//        thisLightColor *= lightArea * thisLight.intensity / scene.lightsamples;
+//        outputColor += thisLightColor;
+//    }
+
     // TODO: Calculate next level
 
 

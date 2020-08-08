@@ -17,12 +17,14 @@ class MML {
      Generate a translation matrix
      */
     static func translate(mat: simd_float4x4, by displacement: simd_float3) -> simd_float4x4 {
-        var returnValue = mat
-        returnValue[3, 0] += displacement.x
-        returnValue[3, 1] += displacement.y
-        returnValue[3, 2] += displacement.z
+//        var returnValue = mat
+//        returnValue[3, 0] += displacement.x
+//        returnValue[3, 1] += displacement.y
+//        returnValue[3, 2] += displacement.z
         
-        return returnValue
+        let matrix = SCNMatrix4Translate(SCNMatrix4Identity, CGFloat(displacement.x), CGFloat(displacement.y), CGFloat(displacement.z))
+
+        return mat * simd_float4x4(matrix)
     }
     
     /**
@@ -30,9 +32,9 @@ class MML {
      */
     static func rotate(mat: simd_float4x4, by radians: Float, around axis: simd_float3) -> simd_float4x4 {
         let normAxis = normalize(axis)
-        let matrix = SCNMatrix4Rotate(SCNMatrix4(mat), CGFloat(radians), CGFloat(axis.x), CGFloat(normAxis.y), CGFloat(normAxis.z))
+        let matrix = SCNMatrix4Rotate(SCNMatrix4Identity, CGFloat(radians), CGFloat(axis.x), CGFloat(normAxis.y), CGFloat(normAxis.z))
         
-        return simd_float4x4(matrix)
+        return mat * simd_float4x4(matrix)
     }
     
     /**

@@ -16,6 +16,8 @@
 		B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */ = {isa = PBXBuildFile; fileRef = B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */; };
 		B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BBC5E224B18578002B2EBD /* SceneLoader.swift */; };
 		B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0BBC5E424B18B21002B2EBD /* MML.swift */; };
+		B0D102A024DA80D200D70CAF /* loki.metal in Sources */ = {isa = PBXBuildFile; fileRef = B0D1029E24DA80D200D70CAF /* loki.metal */; };
+		B0D102A124DA80D200D70CAF /* loki_header.metal in Sources */ = {isa = PBXBuildFile; fileRef = B0D1029F24DA80D200D70CAF /* loki_header.metal */; };
 		B0E5566324A5C76E00030471 /* Film.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566224A5C76E00030471 /* Film.swift */; };
 /* End PBXBuildFile section */
 
@@ -87,6 +89,9 @@
 		B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderTypes.h; sourceTree = "<group>"; };
 		B0BBC5E224B18578002B2EBD /* SceneLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneLoader.swift; sourceTree = "<group>"; };
 		B0BBC5E424B18B21002B2EBD /* MML.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MML.swift; sourceTree = "<group>"; };
+		B0D1029E24DA80D200D70CAF /* loki.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = loki.metal; sourceTree = "<group>"; };
+		B0D1029F24DA80D200D70CAF /* loki_header.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = loki_header.metal; sourceTree = "<group>"; };
+		B0D102A224DB544300D70CAF /* transformation.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = transformation.test; sourceTree = "<group>"; };
 		B0E5566224A5C76E00030471 /* Film.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Film.swift; sourceTree = "<group>"; };
 		B0FF8A8024CF487A005B70DE /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -106,6 +111,7 @@
 		B000270D24D8EA3500780056 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				B0D102A224DB544300D70CAF /* transformation.test */,
 				B000270E24D8EA3500780056 /* hw2 */,
 				B000271524D8EA3500780056 /* hw4 */,
 				B000271A24D8EA3500780056 /* hw3 */,
@@ -224,6 +230,7 @@
 		B06DF87E249EC29300BD8145 /* MetalRaytracer */ = {
 			isa = PBXGroup;
 			children = (
+				B0D1029D24DA80D200D70CAF /* Loki */,
 				B06DF87F249EC29300BD8145 /* main.swift */,
 				B07ADD0E24AAD130005BCD16 /* Engine.swift */,
 				B008D1D024B6DF4B00D4C67E /* Scene.swift */,
@@ -237,6 +244,15 @@
 			);
 			path = MetalRaytracer;
 			sourceTree = "<group>";
+		};
+		B0D1029D24DA80D200D70CAF /* Loki */ = {
+			isa = PBXGroup;
+			children = (
+				B0D1029E24DA80D200D70CAF /* loki.metal */,
+				B0D1029F24DA80D200D70CAF /* loki_header.metal */,
+			);
+			path = Loki;
+			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
@@ -303,7 +319,9 @@
 			files = (
 				B06CD10A24C178EB00E155B0 /* shaders.metal in Sources */,
 				B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */,
+				B0D102A024DA80D200D70CAF /* loki.metal in Sources */,
 				B06DF880249EC29300BD8145 /* main.swift in Sources */,
+				B0D102A124DA80D200D70CAF /* loki_header.metal in Sources */,
 				B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */,
 				B0E5566324A5C76E00030471 /* Film.swift in Sources */,
 				B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */,
