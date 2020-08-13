@@ -9,39 +9,27 @@
 #define EPSILON 0.0001
 
 #include <metal_stdlib>
+#include <metal_raytracing>
 #include "ShaderTypes.h"
-#include "loki_header.metal"
-using namespace metal;
+#include "../Loki/loki_header.metal"
 
-// Represents a three dimensional ray which will be intersected with the scene. The ray type
-// is customized using properties of the MPSRayIntersector.
-struct Ray {
-    packed_float3 origin;
-    uint mask;
-    packed_float3 direction;
-    
-    float maxDistance;
-    
-    float3 color;
+using namespace metal;
+using namespace raytracing;
+
+struct BoundingBox{
+    packed_float3 min;
+    packed_float3 max;
 };
 
 
-
-kernel void generateInitRay(simd_uint2 idx2 [[thread_position_in_grid]],
-                            constant SceneData & scene,
-                            device Ray* rayBuffer) {
-    // Get the current buffer index
-    int index = idx2.x + scene.imageSize.x * idx2.y;
+inline ray generateInitRay(uint2 idx2, constant SceneData & scene) {
 
     simd_float3 target = scene.camera.imagePlaneTopLeft + ((float)idx2[0] + 0.5) * scene.camera.pixelRight + ((float)idx2[1] + 0.5) * scene.camera.pixelDown;
     simd_float3 direction = normalize(target - scene.camera.origin);
 
-    Ray thisRay = Ray();
-    thisRay.direction = direction;
-    thisRay.origin = scene.camera.origin;
-    thisRay.maxDistance = INFINITY;
-    thisRay.mask = 255;
-    rayBuffer[index] = thisRay;
+    ray thisRay = ray(scene.camera.origin,
+                      direction);
+    return thisRay;
 }
 
 
@@ -54,91 +42,6 @@ inline RGBData float3ToRGB(simd_float3 value) {
     RGBData data = {r, g, b, 255};
     return data;
 }
-
-
-
-
-// This kernal generates shadow rays for use in shading.
-kernel void neeKernel(simd_uint2 idx2 [[thread_position_in_grid]],
-                          constant SceneData & scene [[buffer(0)]],
-                          constant simd_float3 * vertexBuffer [[buffer(1)]],
-                      
-                          constant DirectionalLight * directionalLights [[buffer(2)]],
-                          constant PointLight * pointLights [[buffer(3)]],
-                          constant Quadlight * quadLights [[buffer(4)]],
-                      
-                          device Ray * rays [[buffer(5)]],
-                          device Intersection * intersections [[buffer(6)]],
-                          device Ray * shadowRays [[buffer(7)]],
-                          constant Material * triMaterials[[buffer(8)]],
-                          device RGBData * outputBuffer [[buffer(9)]]) {
-    // Get the current buffer index
-    int index = idx2.x + scene.imageSize.x * idx2.y;
-    
-    Intersection hit = intersections[index];
-    
-    // Check if there's an intersection
-    if (hit.distance < 0) {
-        return;
-    }
-    
-    simd_float3 v1 = vertexBuffer[3 * hit.primitiveIndex + 0];
-    simd_float3 v2 = vertexBuffer[3 * hit.primitiveIndex + 1];
-    simd_float3 v3 = vertexBuffer[3 * hit.primitiveIndex + 2];
-    
-    simd_float3 hitPosition = v1 * hit.coordinates.x + v2 * hit.coordinates.y + v3 * (1.0f - hit.coordinates.x - hit.coordinates.y);
-    
-    // Generate sample for directional lights
-    int shadowRayIndex = index * (scene.directLightCount + scene.pointLightCount + scene.lightsamples * scene.quadLightCount);
-    for (int i = 0; i < scene.directLightCount; i++) {
-        Ray thisRay;
-        thisRay.direction = -directionalLights[i].toDirection;
-        thisRay.origin = hitPosition + EPSILON * thisRay.direction;
-        thisRay.maxDistance = INFINITY;
-        shadowRays[shadowRayIndex++] = thisRay;
-    }
-
-    // Generate samples for point light
-    for (int i = 0; i < scene.pointLightCount; i++) {
-        float3 toLight = pointLights[i].position - hitPosition;
-        Ray thisRay;
-        thisRay.direction = normalize(toLight);
-        thisRay.maxDistance = length(toLight) - EPSILON * 2;
-        thisRay.origin = hitPosition + EPSILON * thisRay.direction;
-        shadowRays[shadowRayIndex++] = thisRay;
-    }
-    
-    // Generate samples for quadLight
-    // Using stratification
-    int root = sqrt(float(scene.lightsamples));
-    for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
-        for (int i = 0; i < root; i++) {
-            for (int j = 0; j < root; j++) {
-                //Generate two random numbers
-                float one = 1.0f;
-                Loki random1 = Loki(index, i, j);
-                float x = modf(random1.rand(), one);
-                Loki random2 = Loki(index, i, j+1);
-                float y = modf(random2.rand(), one);
-
-                // Stratify the sampling
-                Quadlight light = quadLights[lightID];
-                x = (i + x) / root;
-                y = (j + y) / root;
-                simd_float3 position = light.a + simd_float3(x, x, x) * light.ab + simd_float3(y, y, y) * light.ac;
-
-                // Generate the ray
-                Ray thisRay;
-                float3 toLight = position - hitPosition;
-                thisRay.direction = normalize(toLight);
-                thisRay.origin = EPSILON * thisRay.direction + hitPosition;
-                thisRay.maxDistance = length(toLight) - EPSILON;
-                shadowRays[shadowRayIndex++] = thisRay;
-            }
-        }
-    }
-}
-
 
 /**
  Returns the value of BRDF with the given information.
@@ -164,121 +67,142 @@ inline float3 computeShading(Material material, float3 inOmega, float3 toLight, 
 }
 
 
-// This kernal use the shadow rays as well as surface information to shade the image.
-kernel void shadingKernel(simd_uint2 idx2 [[thread_position_in_grid]],
-                        constant SceneData & scene [[buffer(0)]],
-                        constant simd_float3 * vertexBuffer [[buffer(1)]],
+[[kernel]]
+void pathtracingKernel(uint2 idx2 [[thread_position_in_grid]],
+                       constant SceneData & scene [[buffer(0)]],
+                       primitive_acceleration_structure accelerationStructure [[buffer(1)]],
+                        
+                       constant simd_float3 * triVertBuffer [[buffer(2)]],
+                       constant Material * triMaterialBuffer [[buffer(3)]],
+                              
+                       constant DirectionalLight * directionalLights [[buffer(4)]],
+                       constant PointLight * pointLights [[buffer(5)]],
+                       constant Quadlight * quadLights [[buffer(6)]],
 
-                        constant DirectionalLight * directionalLights [[buffer(2)]],
-                        constant PointLight * pointLights [[buffer(3)]],
-                        constant Quadlight * quadLights [[buffer(4)]],
-                        constant Material * triMaterials[[buffer(5)]],
-
-                        device Ray * rays [[buffer(6)]],
-                        device Intersection * intersections [[buffer(7)]],
-                        device Ray * shadowRays [[buffer(8)]],
-                        device Intersection * shadowIntersections [[buffer(9)]],
-                        device RGBData * outputBuffer [[buffer(10)]]) {
-    
-    // Get the current buffer index
+                       device RGBData* outputBuffer [[buffer(7)]]) {
+    // Generate initial ray
+    ray r = generateInitRay(idx2, scene);
+    intersector<triangle_data> intersector;
     int index = idx2.x + scene.imageSize.x * idx2.y;
     
-    Intersection hit = intersections[index];
-    // Check if there's an intersection
-    if (hit.distance < 0) {
-        return;
-    }
+    // Properties to be populated
+    float3 outputColor = float3(0.0, 0.0, 0.0);
+    float3 throughput = float3(1.0, 1.0, 1.0);
+
     
-    simd_float3 v1 = vertexBuffer[3 * hit.primitiveIndex + 0];
-    simd_float3 v2 = vertexBuffer[3 * hit.primitiveIndex + 1];
-    simd_float3 v3 = vertexBuffer[3 * hit.primitiveIndex + 2];
-    
-    simd_float3 hitPosition = v1 * hit.coordinates.x + v2 * hit.coordinates.y + v3 * (1.0f - hit.coordinates.x - hit.coordinates.y);
-    simd_float3 hitNormal = normalize(cross(v2 - v1, v3 - v1));
-    Ray ray = rays[index];
-    Material hitMaterial = triMaterials[hit.primitiveIndex];
-    
-    int shadowRayIndex = index * (scene.directLightCount + scene.pointLightCount + scene.lightsamples * scene.quadLightCount);
-    simd_float3 outputColor = simd_float3(0.0, 0.0, 0.0);
-    
-    // Calculate Direct Light contribution
-    for (int i = 0; i < scene.directLightCount; i++) {
-        Intersection thisShadowIntersection = shadowIntersections[shadowRayIndex];
-        Ray thisShadowRay = shadowRays[shadowRayIndex++];
-        DirectionalLight thisLight = directionalLights[i];
+    // Loop according to depth
+    for (int depth = 0; depth < scene.maxDepth; depth++) {
+        
+        // Find intersection
+        intersector.accept_any_intersection(false);
+        intersection_result<triangle_data> intersection;
+        intersection = intersector.intersect(r, accelerationStructure);
+        
+        // Shade the intersection if there's a hit
+        if (intersection.distance > 0) {
+            // Get the hitNormal and hitMaterial
+            float3 v1 = triVertBuffer[3 * intersection.primitive_id + 0];
+            float3 v2 = triVertBuffer[3 * intersection.primitive_id + 1];
+            float3 v3 = triVertBuffer[3 * intersection.primitive_id + 2];
 
-        // Check if it is occluded
-        if (thisShadowIntersection.distance < 0) {
-            outputColor += computeShading(hitMaterial, -ray.direction, thisShadowRay.direction, hitNormal, thisLight.brightness);
-        }
-    }
+            float3 hitPosition = v1 * intersection.triangle_barycentric_coord.x + v2 * intersection.triangle_barycentric_coord.y + v3 * (1.0f - intersection.triangle_barycentric_coord.x - intersection.triangle_barycentric_coord.y);
+            float3 hitNormal = normalize(cross(v2 - v1, v3 - v1));
+            Material hitMaterial = triMaterialBuffer[intersection.primitive_id];
 
-    // Calculate Point Light contribution
-    for (int i = 0; i < scene.pointLightCount; i++) {
-        Intersection thisShadowIntersection = shadowIntersections[shadowRayIndex];
-        Ray thisShadowRay = shadowRays[shadowRayIndex++];
-        PointLight thisLight = pointLights[i];
-
-        // Check if it is occluded
-        if (thisShadowIntersection.distance < 0) {
-            outputColor += computeShading(hitMaterial, -ray.direction, thisShadowRay.direction, hitNormal, thisLight.brightness);
-        }
-    }
-    
-    // TODO: Calculate Quadlight contribution
-//    int root = sqrt(float(scene.lightsamples));
-//    for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
-//
-//        Quadlight thisLight = quadLights[lightID];
-//        simd_float3 lightNormal = normalize(cross(thisLight.ac, thisLight.ab));
-//        float lightArea = length(cross(thisLight.ab, thisLight.ac));
-//        simd_float3 thisLightColor = simd_float3(0.0, 0.0, 0.0);
-//
-//        for (int i = 0; i < root; i++) {
-//            for (int j = 0; j < root; j++) {
-//                Intersection thisShadowIntersection = shadowIntersections[shadowRayIndex];
-//                Ray thisShadowRay = shadowRays[shadowRayIndex++];
-//
-//                // Check if this ray is occluded
-//                if (thisShadowIntersection.distance < 0) {
-//                    simd_float3 inOmega = thisShadowRay.direction;
-//                    simd_float3 outOmega = -ray.direction;
-//                    float proj = dot(outOmega, hitNormal);
-//                    simd_float3 r = 2.0 * simd_float3(proj, proj, proj) * hitNormal - outOmega;
-//
-//                    simd_float3 f;
-//
-////                    if (hitMaterial.brdf == Phong)
-////                    {
-////                        f = hitMaterial.diffuse / PI +
-////                        hitMaterial.specular / TWO_PI * (hitMaterial.shininess + 2) * pow(glm::dot(r, inOmega), hitMaterial.shininess);
-////                    } else if (hitMaterial.brdf == GGX) {
-////                        BRDF_GGX_Importance brdfObj;
-////                        brdfObj.setMaterial(hitMaterial);
-////                        f = brdfObj.evaluate(inOmega, outOmega, hitNormal);
-////                    }
-//
-//                    f = hitMaterial.diffuse / M_PI_F + hitMaterial.specular / M_PI_2_F * (hitMaterial.shininess + 2) * pow(dot(r, inOmega), hitMaterial.shininess);
-//
-//                    float n_w = max(0.0, dot(hitNormal, inOmega));
-//
-//                    float dist_squared = thisShadowRay.maxDistance * thisShadowRay.maxDistance;
-//                    float n_l_w = max(0.0, dot(lightNormal, -inOmega)) / dist_squared;
-//
-//                    thisLightColor += f * n_w * n_l_w;
-//                }
-//            }
-//        }
-//
-//        thisLightColor *= lightArea * thisLight.intensity / scene.lightsamples;
-//        outputColor += thisLightColor;
-//    }
-
-    // TODO: Calculate next level
-
-
-//    outputColor = hitMaterial.diffuse;
-
+            // MARK: - NEE pathtracing contribution
+            if (scene.neeOn == 1) {
+                // check if we have hit a light
+                if (hitMaterial.emission.x > 0 || hitMaterial.emission.y > 0 || hitMaterial.emission.z > 0) {
+                    // Check if this is the first layer: include the light if this is the first layer
+                    outputColor += depth == 0 ? throughput * hitMaterial.emission : 0.0;
+                    break;
+                }
+                
+                // We did not hit a light, calculate the light contribution
+                intersector.accept_any_intersection(true); // Shadow ray mode
+                // Direct Light
+                for (int i = 0; i < scene.directLightCount; i++) {
+                    ray shadowRay;
+                    DirectionalLight thisLight = directionalLights[i];
+                    shadowRay.direction = -thisLight.toDirection;
+                    shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
+                    shadowRay.max_distance = INFINITY;
+                    
+                    intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+                    
+                    // check if the light is blocked
+                    if (shadowIntersection.distance <= 0) {
+                        // Take into account of the light contribution
+                        outputColor += throughput * computeShading(hitMaterial, -r.direction, thisLight.toDirection, hitNormal, thisLight.brightness);
+                    }
+                }
+                
+                // Point Light
+                for (int i = 0; i < scene.pointLightCount; i++) {
+                    PointLight thisLight = pointLights[i];
+                    float3 toLight = thisLight.position - hitPosition;
+                    ray shadowRay;
+                    shadowRay.direction = normalize(toLight);
+                    shadowRay.max_distance = length(toLight) - EPSILON * 2;
+                    shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
+                    
+                    intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+                    
+                    if (shadowIntersection.distance <= 0) {
+                        // Take into account of the light contribution
+                        outputColor += throughput * computeShading(hitMaterial, -r.direction, shadowRay.direction, hitNormal, thisLight.brightness);
+                    }
+                }
+                
+                // Quadlight: Using stratification
+                int root = sqrt(float(scene.lightsamples));
+                // Loop through each light
+                for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
+                    float3 color = float3(0.0, 0.0, 0.0);
+                    Quadlight thisLight = quadLights[lightID];
+                    
+                    // Loop through each sample
+                    for (int i = 0; i < root; i++) {
+                        for (int j = 0; j < root; j++) {
+                            //Generate two random numbers
+                            float one = 1.0f;
+                            Loki random1 = Loki(index, i, j);
+                            float x = modf(random1.rand(), one);
+                            Loki random2 = Loki(index, i, j+1);
+                            float y = modf(random2.rand(), one);
+            
+                            // Stratify the sampling
+                            x = (i + x) / root;
+                            y = (j + y) / root;
+                            float3 position = thisLight.a + simd_float3(x, x, x) * thisLight.ab + simd_float3(y, y, y) * thisLight.ac;
+            
+                            // Generate the ray
+                            ray shadowRay;
+                            float3 toLight = position - hitPosition;
+                            shadowRay.direction = normalize(toLight);
+                            shadowRay.origin = EPSILON * shadowRay.direction + hitPosition;
+                            shadowRay.max_distance = length(toLight) - EPSILON;
+                            
+                            // Check if it is blocked
+                            intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+                            
+                            if (shadowIntersection.distance <= 0){
+                                color += computeShading(hitMaterial, -r.direction, toLight, hitNormal, thisLight.intensity);
+                            }
+                            
+                        }
+                    } // End of sample loops
+                    
+                    float area = length(cross(thisLight.ab, thisLight.ac));
+                    outputColor += color * area / (float)scene.lightsamples;
+                
+                } // End of quadLight Loop
+            } // End of NEE if
+        } // End of hit condition
+        
+        // DEBUGING ONLY
+        break;
+    }// End of depth loop
+        
     outputBuffer[index] = float3ToRGB(outputColor);
 }
-

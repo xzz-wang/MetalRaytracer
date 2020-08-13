@@ -73,52 +73,18 @@ class SceneLoader {
             loadCommand(args: args)
         }
         
-        print(curTransform)
-        
         setupCamera()
         
-        setupMPS()
-        
         scene.triVerts = triVerts
-        scene.triMaterial = triMaterial
+        scene.triMaterials = triMaterial
+        
+        scene.sphereTransforms = sphereTransforms
+        scene.sphereMaterials = sphereMaterial
         
         scene.makeLightPlaceholders()
         
         return scene
     }
-    
-    
-    
-    // MARK: - Interaction with Metal Performance Shader
-    
-    private func setupMPS() {
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            print("The environment does not support Metal")
-            return
-        }
-        
-        scene.metalDevice = device
-        
-        // Make the vertex position buffer
-        guard let buffer = device.makeBuffer(bytes: triVerts, length: MemoryLayout<simd_float3>.size * triVerts.count, options: .storageModeShared) else {
-            print("Failed to make vertexPositionBuffer!")
-            return
-        }
-        
-        scene.triVertsBuffer = buffer
-        
-        // Make the acceleration structure
-        scene.accelerationStructure = MPSTriangleAccelerationStructure(device: device)
-        scene.accelerationStructure!.vertexBuffer = scene.triVertsBuffer
-        scene.accelerationStructure!.triangleCount = triVerts.count / 3
-        scene.accelerationStructure!.rebuild()
-        
-        // Make the MPSIntersector
-        scene.intersector = MPSRayIntersector.init(device: device)
-        scene.intersector?.rayDataType = .originMaskDirectionMaxDistance
-        scene.intersector?.rayStride = rayStride
-    }
-
     
     
     // MARK: - Parser for command line arguments
@@ -161,7 +127,7 @@ class SceneLoader {
                         
         } else if command == "sphere" {
             if let loc = loadVec3(args: args, startAt: 1), let radius = Float(args[4]) {
-                var transform = curTransform * matrix_identity_float4x4
+                var transform = curTransform
                 transform = MML.translate(mat: transform, by: loc)
                 transform = MML.scale(mat: transform, by: simd_float3(repeating: radius))
                 

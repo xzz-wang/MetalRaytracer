@@ -8,9 +8,12 @@
 
 import Foundation
 import simd
-import MetalPerformanceShaders
+import Metal
 
-let rayStride = 48 // Due to the Ray struct we are using
+struct BoundingBox {
+    var min: MTLPackedFloat3
+    var max: MTLPackedFloat3
+}
 
 class Scene {
     var debugDescription: String {
@@ -35,18 +38,15 @@ class Scene {
     
     public var camera: Camera?
     
-    
-    // Part two: MPS
-    public var metalDevice: MTLDevice?
-    public var triVertsBuffer: MTLBuffer?
-    public var accelerationStructure: MPSTriangleAccelerationStructure?
-    public var intersector: MPSRayIntersector?
-    
-    // Part three: Geometrics
+    // Part two: Geometrics
     public var triVerts: [simd_float3] = []
-    public var triMaterial: [Material] = []
+    public var triMaterials: [Material] = []
     
-    // Part four: Lights
+    public var sphereTransforms: [simd_float4x4] = []
+    public var sphereMaterials: [Material] = []
+    public var sphereBoundingBoxes: [BoundingBox] = []
+    
+    // Part three: Lights
     public var directionalLights: [DirectionalLight] = []
     private var directionalLightPadded = false
     public var directionalLightsCount: Int {
@@ -86,10 +86,7 @@ class Scene {
 
     
     public func isComplete() -> Bool {
-        if (camera != nil) &&
-            accelerationStructure != nil &&
-            intersector != nil &&
-            metalDevice != nil{
+        if (camera != nil){
             return true
         }
         
@@ -126,7 +123,7 @@ class Scene {
         data.directLightCount = Int32(directionalLightsCount)
         data.quadLightCount = Int32(quadLightsCount)
         data.lightsamples = Int32(lightsamples)
-        data.shadowRayPerPixel = Int32(shadowRayPerPixel)
+        data.maxDepth = Int32(maxDepth)
         return data
     }
 }

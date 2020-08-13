@@ -14,17 +14,19 @@ class Engine {
     private var scene: Scene!
     
     // Metal Objects
+    private var metalDevice: MTLDevice!
+    private var accelerationStructure: MTLAccelerationStructure!
     private var commandQueue: MTLCommandQueue!
     
     // Pipelines
-    private var initRayPipeline: MTLComputePipelineState!
-    private var neePipeline: MTLComputePipelineState! // Next-event estimation, execute after itersections were found
-    private var shadingPipeline: MTLComputePipelineState! // Shade the image and proeduce bounces
+    private var pathtracingPipeline: MTLComputePipelineState!
     
     // Buffers
+    // Acceleration Structure
+    private var triVertexBuffer: MTLBuffer!
+    
     // Read-only Buffers
     private var sceneDataBuffer: MTLBuffer!
-    private var triVertexBuffer: MTLBuffer!
     private var triMaterialBuffer: MTLBuffer!
     
     private var directionalLightBuffer: MTLBuffer!
@@ -32,10 +34,6 @@ class Engine {
     private var quadLightBuffer: MTLBuffer!
 
     // Other buffers
-    private var rayBuffer: MTLBuffer!
-    private var intersectionBuffer: MTLBuffer!
-    private var shadowRayBuffer: MTLBuffer!
-    private var shadowIntersectionBuffer: MTLBuffer!
     private var outputImageBuffer: MTLBuffer!
     
     
@@ -62,6 +60,52 @@ class Engine {
     
     
     /**
+     Setup required metal objects
+     */
+    private func setupAccelerationStructure() -> Bool {
+        
+        /* SETUP acceleration Structure */
+        // make triangle vertex buffer
+        // Make the vertex position buffer
+        guard let buffer = metalDevice.makeBuffer(bytes: scene.triVerts, length: MemoryLayout<simd_float3>.size * scene.triVerts.count, options: .storageModeShared) else {
+            print("Failed to make vertexPositionBuffer!")
+            return false
+        }
+        triVertexBuffer = buffer        
+
+        // Now acceleration structure itself
+        let accelerationStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
+        
+        // greate geometry descriptor
+        let triGeometryDescriptor = MTLAccelerationStructureTriangleGeometryDescriptor()
+        triGeometryDescriptor.vertexBuffer = triVertexBuffer
+        triGeometryDescriptor.triangleCount = scene.triVerts.count / 3
+        
+//        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
+//        sphereGeometryDescriptor.boundingBoxBuffer
+        
+        accelerationStructureDescriptor.geometryDescriptors = [ triGeometryDescriptor ]
+        
+        // Allocate space
+        let sizes = metalDevice.accelerationStructureSizes(descriptor: accelerationStructureDescriptor)
+        accelerationStructure = metalDevice.makeAccelerationStructure(size: sizes.accelerationStructureSize)!
+        let scratchBuffer = metalDevice.makeBuffer(length: sizes.buildScratchBufferSize, options: .storageModePrivate)!
+        
+        // Build the acceleration structure
+        let commandBuffer = commandQueue.makeCommandBuffer()!
+        let commandEncoder = commandBuffer.makeAccelerationStructureCommandEncoder()!
+        commandEncoder.build(accelerationStructure: accelerationStructure,
+                                                descriptor: accelerationStructureDescriptor,
+                                                scratchBuffer: scratchBuffer,
+                                                scratchBufferOffset: 0)
+        commandEncoder.endEncoding()
+        commandBuffer.commit()
+
+        return true
+    }
+    
+    
+    /**
      Helper method that sets up all required buffers. Only called once after setupScene
      */
     private func setupBuffers() -> Bool {
@@ -69,32 +113,15 @@ class Engine {
         
         // Initialize SceneData buffer
         let data = [scene.getSceneData()]
-        if let buffer = scene.metalDevice!.makeBuffer(bytes: data ,length: MemoryLayout<SceneData>.size, options: .storageModeShared) {
+        if let buffer = metalDevice!.makeBuffer(bytes: data ,length: MemoryLayout<SceneData>.size, options: .storageModeShared) {
             sceneDataBuffer = buffer
         } else {
             print("Unable to initialize sceneDataBuffer!")
             return false
         }
         
-        
-        // Initialize RayBuffer
-        if let buffer = scene.metalDevice!.makeBuffer(length: length * rayStride, options: .storageModeShared) {
-            rayBuffer = buffer
-        } else {
-            print("Unable to initialize rayBuffer!")
-            return false
-        }
-        
-        // Initialize Intersection Buffer
-        if let buffer = scene.metalDevice!.makeBuffer(length: MemoryLayout<Intersection>.size * length, options: .storageModeShared) {
-            intersectionBuffer = buffer
-        } else {
-            print("Unable to generate intersectionBuffer!")
-            return false
-        }
-        
         // Initialize Vertex Buffer
-        if let buffer = scene.metalDevice!.makeBuffer(bytes: scene.triVerts, length: scene.triVerts.count * MemoryLayout<simd_float3>.size, options: .storageModeShared) {
+        if let buffer = metalDevice!.makeBuffer(bytes: scene.triVerts, length: scene.triVerts.count * MemoryLayout<simd_float3>.size, options: .storageModeShared) {
             triVertexBuffer = buffer
         } else {
             print("Unable to generate vertex buffer")
@@ -102,7 +129,7 @@ class Engine {
         }
         
         // Initialize Triangle Material
-        if let buffer = scene.metalDevice!.makeBuffer(bytes: scene.triMaterial, length: scene.triMaterial.count * MemoryLayout<Material>.size, options: .storageModeShared) {
+        if let buffer = metalDevice!.makeBuffer(bytes: scene.triMaterials, length: scene.triMaterials.count * MemoryLayout<Material>.size, options: .storageModeShared) {
             triMaterialBuffer = buffer
         } else {
             print("Unable to generate material buffer")
@@ -110,25 +137,17 @@ class Engine {
         }
 
         // Initialize Output Image data Buffer
-        if let buffer = scene.metalDevice!.makeBuffer(length: length * MemoryLayout<RGBData>.size, options: .storageModeShared) {
+        if let buffer = metalDevice!.makeBuffer(length: length * MemoryLayout<RGBData>.size, options: .storageModeShared) {
             outputImageBuffer = buffer
         } else {
             print("Unable to generate output buffer")
             return false
         }
         
-        // Initialize ShadowRayBuffers
-        let shadowRayCount = scene.pixelCount * scene.shadowRayPerPixel
-        if let rb = scene.metalDevice!.makeBuffer(length: shadowRayCount * rayStride, options: .storageModeShared),
-            let ib = scene.metalDevice!.makeBuffer(length: shadowRayCount * MemoryLayout<Intersection>.size, options: .storageModeShared) {
-            shadowRayBuffer = rb
-            shadowIntersectionBuffer = ib
-        }
-        
         // Initialize lightBuffers
-        if let dirBuffer = scene.metalDevice!.makeBuffer(bytes: scene.directionalLights, length: scene.directionalLights.count * MemoryLayout<DirectionalLight>.size, options: .storageModeShared),
-            let pointBuffer = scene.metalDevice!.makeBuffer(bytes: scene.pointLights, length: scene.pointLights.count * MemoryLayout<PointLight>.size, options: .storageModeShared),
-            let quadBuffer = scene.metalDevice!.makeBuffer(bytes: scene.quadLights, length: scene.quadLights.count * MemoryLayout<Quadlight>.size, options: .storageModeShared){
+        if let dirBuffer = metalDevice!.makeBuffer(bytes: scene.directionalLights, length: scene.directionalLights.count * MemoryLayout<DirectionalLight>.size, options: .storageModeShared),
+            let pointBuffer = metalDevice!.makeBuffer(bytes: scene.pointLights, length: scene.pointLights.count * MemoryLayout<PointLight>.size, options: .storageModeShared),
+            let quadBuffer = metalDevice!.makeBuffer(bytes: scene.quadLights, length: scene.quadLights.count * MemoryLayout<Quadlight>.size, options: .storageModeShared){
             directionalLightBuffer = dirBuffer
             pointLightBuffer = pointBuffer
             quadLightBuffer = quadBuffer
@@ -147,40 +166,26 @@ class Engine {
      */
     private func setupPipelines() -> Bool {
         // Get default library
-        guard let defaultLibrary = scene.metalDevice?.makeDefaultLibrary() else {
+        guard let defaultLibrary = metalDevice?.makeDefaultLibrary() else {
             print("Unable to get defaultLibrary!")
             return false
         }
         
-        // Pipeline 1: Initialize all the rays
-        guard let initRayFunction = defaultLibrary.makeFunction(name: "generateInitRay") else {
-            print("Failed to fetch initRay shader method")
-            return false
-        }
-        
-        // Pipeline 2: compute nee
-        guard let neeKernalFunc = defaultLibrary.makeFunction(name: "neeKernel") else {
-            print("Failed to fetch nee kernel method")
-            return false
-        }
-        
-        // Pipeline 3: Shading
-        guard let shadingKernelFunc = defaultLibrary.makeFunction(name: "shadingKernel") else {
-            print("Failed to fetch shading kernel method")
+        // Pipeline 1: the path tracing pipeline
+        guard let pathtracingFunction = defaultLibrary.makeFunction(name: "pathtracingKernel") else {
+            print("Failed to fetch pathtracing kernel")
             return false
         }
         
         do {
-            initRayPipeline = try scene.metalDevice?.makeComputePipelineState(function: initRayFunction)
-            neePipeline = try scene.metalDevice?.makeComputePipelineState(function: neeKernalFunc)
-            shadingPipeline = try scene.metalDevice?.makeComputePipelineState(function: shadingKernelFunc)
+            pathtracingPipeline = try metalDevice?.makeComputePipelineState(function: pathtracingFunction)
         } catch {
             print("Failed to create Pipelines")
             return false
         }
 
         
-        guard let queue = scene.metalDevice?.makeCommandQueue() else {
+        guard let queue = metalDevice?.makeCommandQueue() else {
             print("Unable to generate command queue")
             return false
         }
@@ -189,6 +194,8 @@ class Engine {
         return true
     }
     
+    // MARK: - Here's the main function. Everything starts here.
+    
     
     /**
      The core of the rendering engine. Everything goes here.
@@ -196,14 +203,24 @@ class Engine {
     public func render(filename sourcePath: String) {
         
         // Perform setup
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            print("The environment does not support Metal")
+            return
+        }
+        metalDevice = device
+        
+
         if !setupScene(path: sourcePath) { return }
         if !setupBuffers() { return }
         if !setupPipelines() { return }
         
-        let sceneData = scene.getSceneData()
+//        let sceneData = scene.getSceneData()
 
         // Start the rendering stopwatch
         let startTime = Date.init()
+        
+        // Construct the acceleration structure
+        if !setupAccelerationStructure() { return }
         
         // Create the command buffer needed
         guard let commandBuffer = commandQueue.makeCommandBuffer() else {
@@ -211,79 +228,19 @@ class Engine {
             return
         }
         
-        // MARK: Step 1: Generate all initial rays
-        let initRayEncoder = commandBuffer.makeComputeCommandEncoder()
-        initRayEncoder?.setComputePipelineState(initRayPipeline)
-        initRayEncoder?.setBuffer(sceneDataBuffer, offset: 0, index: 0)
-        initRayEncoder?.setBuffer(rayBuffer, offset: 0, index: 1)
+        // MARK: The main path-tracing kernel
+        let mainKernelEncoder = commandBuffer.makeComputeCommandEncoder()!
+        mainKernelEncoder.setComputePipelineState(pathtracingPipeline)
+        mainKernelEncoder.setBuffer(sceneDataBuffer, offset: 0, index: 0)
+        mainKernelEncoder.setAccelerationStructure(accelerationStructure, bufferIndex: 1)
+        mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, outputImageBuffer], offsets: Array(repeating: 0, count: 6), range: 2..<8)
+        
         
         let threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
         let threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
-        initRayEncoder?.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-        initRayEncoder?.endEncoding()
+        mainKernelEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+        mainKernelEncoder.endEncoding()
                         
-        // MARK: Step 2: Loop for different layers.
-        var depthCount = 0
-        while depthCount != scene.maxDepth {
-            
-            // Find intersections
-            scene.intersector?.encodeIntersection(
-                commandBuffer: commandBuffer,
-                intersectionType: .nearest,
-                rayBuffer: rayBuffer,
-                rayBufferOffset: 0,
-                intersectionBuffer: intersectionBuffer,
-                intersectionBufferOffset: 0,
-                rayCount: scene.pixelCount,
-                accelerationStructure: scene.accelerationStructure!)
-            
-            // Compute the NEE intersection jobs
-            let neeEncoder = commandBuffer.makeComputeCommandEncoder()
-            neeEncoder?.setComputePipelineState(neePipeline)
-            let neeBuffers = [sceneDataBuffer,
-                              triVertexBuffer,
-                              directionalLightBuffer,
-                              pointLightBuffer,
-                              quadLightBuffer,
-                              rayBuffer,
-                              intersectionBuffer,
-                              shadowRayBuffer, triMaterialBuffer, outputImageBuffer]
-            neeEncoder?.setBuffers(neeBuffers, offsets: Array(repeating: 0, count: 10), range: 0..<10)
-            neeEncoder?.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-            neeEncoder?.endEncoding()
-            
-            // Find shadow ray intersections
-            scene.intersector?.encodeIntersection(
-                commandBuffer: commandBuffer,
-                intersectionType: .any,
-                rayBuffer: shadowRayBuffer,
-                rayBufferOffset: 0,
-                intersectionBuffer: shadowIntersectionBuffer,
-                intersectionBufferOffset: 0,
-                rayCount: Int(sceneData.shadowRayPerPixel) * scene.pixelCount,
-                accelerationStructure: scene.accelerationStructure!)
-
-            // Shade this layer. Generate next layer samples.
-            let shadingEncoder = commandBuffer.makeComputeCommandEncoder()
-            shadingEncoder?.setComputePipelineState(shadingPipeline)
-            let shadingBuffers = [sceneDataBuffer,
-                                  triVertexBuffer,
-                                  directionalLightBuffer,
-                                  pointLightBuffer,
-                                  quadLightBuffer,
-                                  triMaterialBuffer,
-                                  rayBuffer,
-                                  intersectionBuffer,
-                                  shadowRayBuffer,
-                                  shadowIntersectionBuffer,
-                                  outputImageBuffer]
-            shadingEncoder?.setBuffers(shadingBuffers, offsets: Array(repeating: 0, count: 11), range: 0..<11)
-            shadingEncoder?.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-            shadingEncoder?.endEncoding()
-
-            depthCount += 1
-            depthCount = scene.maxDepth
-        }
         
         commandBuffer.commit()
         print("Command Comitted")

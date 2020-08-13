@@ -6,12 +6,8 @@
 //  Copyright © 2020 Xuezheng Wang. All rights reserved.
 //
 
-#import <MetalPerformanceShaders/MetalPerformanceShaders.h>
-#import <simd/SIMD.h>
-
+#import <simd/simd.h>
 // Types
-
-typedef MPSIntersectionDistancePrimitiveIndexCoordinates Intersection;
 
 struct Camera {
     simd_float3 origin;
@@ -55,8 +51,8 @@ struct SceneData {
     int directLightCount;
     int pointLightCount;
     int lightsamples;
-    int shadowRayPerPixel;
-    bool neeOn;
+    int neeOn; // A Boolean
+    int maxDepth;
 };
 
 struct RGBData {
@@ -65,3 +61,4 @@ struct RGBData {
     uint8_t b;
     uint8_t a;
 };
+
