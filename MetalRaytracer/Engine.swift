@@ -71,7 +71,7 @@ class Engine {
             print("Failed to make vertexPositionBuffer!")
             return false
         }
-        triVertexBuffer = buffer        
+        triVertexBuffer = buffer
 
         // Now acceleration structure itself
         let accelerationStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
@@ -80,6 +80,7 @@ class Engine {
         let triGeometryDescriptor = MTLAccelerationStructureTriangleGeometryDescriptor()
         triGeometryDescriptor.vertexBuffer = triVertexBuffer
         triGeometryDescriptor.triangleCount = scene.triVerts.count / 3
+        triGeometryDescriptor.vertexStride = MemoryLayout<simd_float3>.size
         
 //        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
 //        sphereGeometryDescriptor.boundingBoxBuffer
@@ -177,8 +178,15 @@ class Engine {
             return false
         }
         
+//        // DEBUG:
+//        guard let testFunction = defaultLibrary.makeFunction(name: "basicTestingKernel") else {
+//            print("Failed to fetch testing kernel")
+//            return false
+//        }
+
         do {
-            pathtracingPipeline = try metalDevice?.makeComputePipelineState(function: pathtracingFunction)
+            //pathtracingPipeline = try metalDevice?.makeComputePipelineState(function: pathtracingFunction)
+            pathtracingPipeline = try metalDevice!.makeComputePipelineState(function: pathtracingFunction)
         } catch {
             print("Failed to create Pipelines")
             return false
@@ -203,11 +211,21 @@ class Engine {
     public func render(filename sourcePath: String) {
         
         // Perform setup
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            print("The environment does not support Metal")
+        let possibleDevices = MTLCopyAllDevices()
+        var assignedFlag = false
+        for device in possibleDevices {
+            if device.supportsRaytracing {
+                metalDevice = device
+                assignedFlag = true
+            }
+        }
+        
+        if assignedFlag == false {
+            print("Error! Raytracing Not supported")
             return
         }
-        metalDevice = device
+        
+        print("Using graphics card: \(metalDevice.name)")
         
 
         if !setupScene(path: sourcePath) { return }

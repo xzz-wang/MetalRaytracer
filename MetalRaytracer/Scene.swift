@@ -35,6 +35,7 @@ class Scene {
     public var outputName: String = "output.png"
     public var spp: Int = 1
     public var lightsamples: Int = 1
+    public var neeOn: Bool = true;
     
     public var camera: Camera?
     
@@ -124,6 +125,7 @@ class Scene {
         data.quadLightCount = Int32(quadLightsCount)
         data.lightsamples = Int32(lightsamples)
         data.maxDepth = Int32(maxDepth)
+        data.neeOn = neeOn ? 1 : 0
         return data
     }
 }

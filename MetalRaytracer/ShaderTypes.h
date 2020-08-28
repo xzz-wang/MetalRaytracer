@@ -51,7 +51,7 @@ struct SceneData {
     int directLightCount;
     int pointLightCount;
     int lightsamples;
-    int neeOn; // A Boolean
+    int neeOn; // A Boolean 1/0
     int maxDepth;
 };
 
