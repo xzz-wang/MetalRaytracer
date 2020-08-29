@@ -9,8 +9,8 @@
 /* Begin PBXBuildFile section */
 		B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B008D1D024B6DF4B00D4C67E /* Scene.swift */; };
 		B066DAF424E5041200B7B3D9 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B066DAF324E5041200B7B3D9 /* Metal.framework */; };
+		B06BDFC024FACB3D002E5A1D /* BRDFs.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06BDFBF24FACB3D002E5A1D /* BRDFs.metal */; };
 		B06CD10A24C178EB00E155B0 /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06CD10924C178EB00E155B0 /* shaders.metal */; };
-		B06CD10C24C17A0100E155B0 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B06CD10B24C17A0100E155B0 /* Constants.swift */; };
 		B06DF880249EC29300BD8145 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B06DF87F249EC29300BD8145 /* main.swift */; };
 		B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07ADD0E24AAD130005BCD16 /* Engine.swift */; };
 		B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */ = {isa = PBXBuildFile; fileRef = B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */; };
@@ -85,8 +85,8 @@
 		B02B371224F9B04F007B537C /* quad.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = quad.test; sourceTree = "<group>"; };
 		B060C86924B82E22004BB4ED /* MetalPerformanceShaders.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalPerformanceShaders.framework; path = System/Library/Frameworks/MetalPerformanceShaders.framework; sourceTree = SDKROOT; };
 		B066DAF324E5041200B7B3D9 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		B06BDFBF24FACB3D002E5A1D /* BRDFs.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = BRDFs.metal; sourceTree = "<group>"; };
 		B06CD10924C178EB00E155B0 /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
-		B06CD10B24C17A0100E155B0 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		B06DF87C249EC29300BD8145 /* MetalRaytracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MetalRaytracer; sourceTree = BUILT_PRODUCTS_DIR; };
 		B06DF87F249EC29300BD8145 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		B07ADD0E24AAD130005BCD16 /* Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engine.swift; sourceTree = "<group>"; };
@@ -255,8 +255,8 @@
 				B0BBC5E224B18578002B2EBD /* SceneLoader.swift */,
 				B0BBC5E424B18B21002B2EBD /* MML.swift */,
 				B0E5566224A5C76E00030471 /* Film.swift */,
-				B06CD10B24C17A0100E155B0 /* Constants.swift */,
 				B06CD10924C178EB00E155B0 /* shaders.metal */,
+				B06BDFBF24FACB3D002E5A1D /* BRDFs.metal */,
 				B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */,
 				B08CA25D24C16AC4007CDAD0 /* MetalRaytracer-Bridging-Header.h */,
 			);
@@ -340,12 +340,12 @@
 				B0D102A024DA80D200D70CAF /* loki.metal in Sources */,
 				B06DF880249EC29300BD8145 /* main.swift in Sources */,
 				B0D102A124DA80D200D70CAF /* loki_header.metal in Sources */,
+				B06BDFC024FACB3D002E5A1D /* BRDFs.metal in Sources */,
 				B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */,
 				B0E5566324A5C76E00030471 /* Film.swift in Sources */,
 				B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */,
 				B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */,
 				B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */,
-				B06CD10C24C17A0100E155B0 /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -12,8 +12,11 @@
 
 #include <metal_stdlib>
 #include <metal_raytracing>
+
 #include "ShaderTypes.h"
 #include "../Loki/loki_header.metal"
+
+#include "BRDFs.metal"
 
 //using namespace metal;
 using namespace metal::raytracing;
@@ -47,18 +50,6 @@ inline RGBData float3ToRGB(simd_float3 value) {
     return data;
 }
 
-/**
- Returns the value of BRDF with the given information.
- */
-inline float3 evaluate(Material material, float3 inOmega, float3 outOmega, float3 normal) {
-    // MARK: Add more supported brdf here
-    
-    float proj = dot(outOmega, normal);
-    float3 r = 2.0 * proj * normal - outOmega;
-
-    float3 f = material.diffuse / PI + material.specular * (material.shininess + 2) / (2 * PI) * pow(max(dot(r, inOmega), 0.0), material.shininess);
-    return f;
-}
 
 /**
  Conpute Phong model contribution: For Direct and Point lights
@@ -245,20 +236,20 @@ void pathtracingKernel(uint2 idx2 [[thread_position_in_grid]],
                     outputColor += throughput * thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, thisLight.position, intersector, accelerationStructure);
                 }
 
-                // Quadlight: Using stratification
-                // Loop through each light
+                // Quadlight: Loop through each light
                 float3 Li = float3(0.0, 0.0, 0.0);
                 for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
-                    
                     Li += sampleQuadLight(intersector, accelerationStructure, quadLights[lightID], hitPosition, hitMaterial, hitNormal, -r.direction, scene.lightsamples, index);
                 } // End of quadLight Loop
                 outputColor += throughput * Li;
                 
             } else {
                 outputColor += throughput * hitMaterial.emission;
+                outputColor += throughput * hitMaterial.ambient;
             } // End of NEE if
             
             // TODO: Generate next ray
+            
             
             
             // TODO: Calculate BRDF value

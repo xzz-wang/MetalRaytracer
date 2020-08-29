@@ -178,12 +178,6 @@ class Engine {
             return false
         }
         
-//        // DEBUG:
-//        guard let testFunction = defaultLibrary.makeFunction(name: "basicTestingKernel") else {
-//            print("Failed to fetch testing kernel")
-//            return false
-//        }
-
         do {
             //pathtracingPipeline = try metalDevice?.makeComputePipelineState(function: pathtracingFunction)
             pathtracingPipeline = try metalDevice!.makeComputePipelineState(function: pathtracingFunction)
@@ -225,14 +219,12 @@ class Engine {
             return
         }
         
-        print("Using graphics card: \(metalDevice.name)")
+        print("Graphics card:\t\t \(metalDevice.name)")
         
 
         if !setupScene(path: sourcePath) { return }
         if !setupBuffers() { return }
         if !setupPipelines() { return }
-        
-//        let sceneData = scene.getSceneData()
 
         // Start the rendering stopwatch
         let startTime = Date.init()
@@ -266,16 +258,20 @@ class Engine {
         commandBuffer.waitUntilCompleted()
         print("Command completed")
         
+        // Render finished
+        let formatted = String(format: "Rendering time:\t\t %.5fs", Date.init().timeIntervalSince(startTime))
+        print(formatted)
+        
         let film = Film(size: scene.imageSize, outputFileName: scene.outputName)
         let pointer = outputImageBuffer.contents().bindMemory(to: RGBData.self, capacity: scene.pixelCount)
         let imageData = Array(UnsafeBufferPointer(start: pointer, count: scene.pixelCount))
         film.setImageData(data: imageData)
         if !film.saveImage() {
             print("Image save failed")
+        } else {
+            print("Image saved as:\t\t \(scene.outputName)")
         }
         
-        // Render finished
-        print("Rendering time: \(Date.init().timeIntervalSince(startTime))")
         
     }
     

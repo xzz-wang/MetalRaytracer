@@ -5,10 +5,10 @@
 //  Created by Xuezheng Wang on 7/16/20.
 //  Copyright © 2020 Xuezheng Wang. All rights reserved.
 //
-
+#pragma once
 #import <simd/simd.h>
-// Types
 
+// Types
 struct Camera {
     simd_float3 origin;
     simd_float3 imagePlaneTopLeft;

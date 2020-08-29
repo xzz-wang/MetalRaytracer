@@ -10,6 +10,8 @@ import Foundation
 import simd
 import MetalPerformanceShaders
 
+let PI: Float = 3.141592653589
+
 class SceneLoader {
     
     private var scene: Scene!
