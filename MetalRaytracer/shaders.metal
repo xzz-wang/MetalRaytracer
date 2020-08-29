@@ -7,7 +7,8 @@
 //
 
 #define EPSILON 0.0001
-#define SUPPORT_NONQUAD FALSE
+#define SUPPORT_NONQUAD TRUE
+#define PI M_PI_F
 
 #include <metal_stdlib>
 #include <metal_raytracing>
@@ -40,8 +41,8 @@ inline ray generateInitRay(uint2 idx2, constant SceneData & scene) {
 inline RGBData float3ToRGB(simd_float3 value) {
     value = value * 255;
     uint8_t r = static_cast<uint8_t>(value.x > 255.0 ? 255 : value.x);
-    uint8_t g = static_cast<uint8_t>(value.x > 255.0 ? 255 : value.y);
-    uint8_t b = static_cast<uint8_t>(value.x > 255.0 ? 255 : value.z);
+    uint8_t g = static_cast<uint8_t>(value.y > 255.0 ? 255 : value.y);
+    uint8_t b = static_cast<uint8_t>(value.z > 255.0 ? 255 : value.z);
     RGBData data = {r, g, b, 255};
     return data;
 }
@@ -49,72 +50,27 @@ inline RGBData float3ToRGB(simd_float3 value) {
 /**
  Returns the value of BRDF with the given information.
  */
-inline float3 evaluate(Material material, float3 inOmega, float3 outOmega, float3 normal, SceneData scene) {
+inline float3 evaluate(Material material, float3 inOmega, float3 outOmega, float3 normal) {
     // MARK: Add more supported brdf here
     
-    float3 r = reflect(-outOmega, normal);
-    float3 f = material.diffuse / M_PI_F;
-    f += material.specular / M_PI_2_F * (material.shininess + 2) * pow(dot(r, inOmega), material.shininess);
-    
+    float proj = dot(outOmega, normal);
+    float3 r = 2.0 * proj * normal - outOmega;
+
+    float3 f = material.diffuse / PI + material.specular * (material.shininess + 2) / (2 * PI) * pow(max(dot(r, inOmega), 0.0), material.shininess);
     return f;
 }
 
 /**
- Conpute Phong model contribution
+ Conpute Phong model contribution: For Direct and Point lights
  */
-inline float3 computeShading(Material material, float3 inOmega, float3 toLight, float3 normal, float3 lightIntensity) {
+inline float3 computeShading(Material material, float3 inOmega, float3 normal, float3 hitPosition, float3 lightPosition, intersector<triangle_data> intersector, primitive_acceleration_structure accelerationStructure) {
     
-    float3 h = normalize(inOmega + toLight);
-    float3 diffuseReflectance = material.diffuse * max(0.0f, dot(normal, toLight));
-    float3 specularReflectance = material.specular * pow(max(dot(normal, h), 0.0f), material.shininess);
-    return lightIntensity * (diffuseReflectance + specularReflectance);
-    
-}
-
-
-/**
- Cast shadow ray and calculate the contribution for a directional light
- */
-inline float3 sampleDirectLight(intersector<triangle_data> intersector,
-                               primitive_acceleration_structure accelerationStructure,
-                               DirectionalLight light,
-                               float3 hitPosition,
-                               Material hitMaterial,
-                               float3 hitNormal,
-                               float3 inOmega) {
-    float3 color = float3(0.0);
-    ray shadowRay;
-    shadowRay.direction = -light.toDirection;
-    shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
-    shadowRay.max_distance = INFINITY;
-
-    intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
-
-    // check if the light is blocked
-    if (shadowIntersection.distance <= 0) {
-        // Take into account of the light contribution
-        color = computeShading(hitMaterial, inOmega, light.toDirection, hitNormal, light.brightness);
-    }
-    
-    return color;
-}
-
-
-/**
- Cast shadow ray and calculate the contribution for a point light
- */
-inline float3 samplePointLight(intersector<triangle_data> intersector,
-                               primitive_acceleration_structure accelerationStructure,
-                               PointLight light,
-                               float3 hitPosition,
-                               Material hitMaterial,
-                               float3 hitNormal,
-                               float3 inOmega) {
+    float3 toLight = lightPosition - hitPosition;
+    float3 outOmega = normalize(toLight);
     float3 color = float3(0.0);
     
-    float3 toLight = light.position - hitPosition;
     ray shadowRay;
-    shadowRay.direction = normalize(toLight);
+    shadowRay.direction = outOmega;
     shadowRay.max_distance = length(toLight) - EPSILON * 2;
     shadowRay.min_distance = 0.0;
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
@@ -122,29 +78,93 @@ inline float3 samplePointLight(intersector<triangle_data> intersector,
     intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
 
     if (shadowIntersection.distance <= 0) {
-        // Take into account of the light contribution
-        color = computeShading(hitMaterial, inOmega, shadowRay.direction, hitNormal, light.brightness);
-    }
+        
+        float3 h = normalize(inOmega + toLight);
+        float3 diffuseReflectance = material.diffuse * max(0.0f, dot(normal, outOmega));
+        float3 specularReflectance = material.specular * pow(max(dot(normal, h), 0.0f), material.shininess);
+        color = diffuseReflectance + specularReflectance;
     
+    }
+
+    return color;
+    
+}
+
+inline float3 shadeQuad(float3 hitPosition, float3 hitNormal, float3 inOmega, Material hitMaterial, Quadlight light, float3 lightPosition, intersector<triangle_data> intersector, primitive_acceleration_structure accelerationStructure) {
+    float3 color = float3(0.0, 0.0, 0.0);
+    float3 toLight = lightPosition - hitPosition;
+    float3 outOmega = normalize(toLight);
+    
+    ray shadowRay;
+    shadowRay.direction = outOmega;
+    shadowRay.max_distance = length(toLight) - EPSILON * 2;
+    shadowRay.min_distance = 0.0;
+    shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
+
+    intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+
+    if (shadowIntersection.distance <= 0) {
+        
+        float3 r = reflect(-outOmega, hitNormal);
+
+        float3 f;
+
+        f = hitMaterial.diffuse / PI +
+        hitMaterial.specular / (2 * PI) * (hitMaterial.shininess + 2) * pow(dot(r, inOmega), hitMaterial.shininess);
+
+        float n_w = max(0.0, dot(hitNormal, outOmega));
+
+        float3 lightNormal = normalize(cross(light.ac, light.ab));
+        float dist_squared = dot(toLight, toLight);
+        float n_l_w = max(0.0, dot(lightNormal, -outOmega)) / dist_squared;
+
+        color = f * n_w * n_l_w;
+    }
+
     return color;
 }
 
 
-template<typename T>
-inline T interpolateVertexAttribute(device T *attributes, unsigned int primitiveIndex, float2 uv) {
-    // Barycentric coordinates sum to one.
-    float3 uvw;
-    uvw.xy = uv;
-    uvw.z = 1.0f - uvw.x - uvw.y;
 
-    // Look up value for each vertex.
-    T T0 = attributes[primitiveIndex * 3 + 0];
-    T T1 = attributes[primitiveIndex * 3 + 1];
-    T T2 = attributes[primitiveIndex * 3 + 2];
+/**
+ Sample the contribution of a quad light
+ */
+inline float3 sampleQuadLight(intersector<triangle_data> intersector,
+                              primitive_acceleration_structure accelerationStructure,
+                              Quadlight light,
+                              float3 hitPosition,
+                              Material hitMaterial,
+                              float3 hitNormal,
+                              float3 inOmega,
+                              int lightsamples,
+                              int index) {
+    
+    int root = sqrt(float(lightsamples));
+    float3 color = float3(0.0, 0.0, 0.0);
+        
+    for(int i = 0; i < root; i++ ) {
+        for(int j = 0; j < root; j++ ) {
+            
+            //Generate two random numbers
+            float one = 1.0f;
+            Loki random1 = Loki(index, i, j);
+            float x = modf(random1.rand(), one);
+            Loki random2 = Loki(index, i, j+1);
+            float y = modf(random2.rand(), one);
+            
+            x = (i + x) / root;
+            y = (j + y) / root;
+            
+            float3 position = light.a + x * light.ab + y * light.ac;
 
-    // Compute sum of vertex attributes weighted by barycentric coordinates.
-    return uvw.x * T0 + uvw.y * T1 + uvw.z * T2;
+            color += shadeQuad(hitPosition, hitNormal, inOmega, hitMaterial, light, position, intersector, accelerationStructure);
+        }
+    }
+
+    float area = length(cross(light.ab, light.ac));
+    return color * light.intensity * area / (root * root);
 }
+
 
 
 
@@ -195,7 +215,6 @@ void pathtracingKernel(uint2 idx2 [[thread_position_in_grid]],
             float z = 1.0 - x - y;
             
             float3 hitPosition = v2 * x + v3 * y + v1 * z;
-//            float3 hitPosition = r.origin + intersection.distance * r.direction;
             float3 hitNormal = normalize(cross(v2 - v1, v3 - v1));
             Material hitMaterial = triMaterialBuffer[intersection.primitive_id];
             
@@ -215,60 +234,32 @@ void pathtracingKernel(uint2 idx2 [[thread_position_in_grid]],
                 
                 // Direct Light
                 for (int i = 0; i < scene.directLightCount; i++) {
-                    outputColor += throughput * sampleDirectLight(intersector, accelerationStructure, directionalLights[i], hitPosition, hitMaterial, hitNormal, -r.direction);
+                    DirectionalLight thisLight = directionalLights[i];
+                    float3 lightPos = hitPosition + MAXFLOAT * thisLight.toDirection;
+                    outputColor += throughput * thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, lightPos, intersector, accelerationStructure);
                 }
 
                 // Point Light
                 for (int i = 0; i < scene.pointLightCount; i++) {
-                    outputColor += throughput * samplePointLight(intersector, accelerationStructure, pointLights[i], hitPosition, hitMaterial, hitNormal, -r.direction);
+                    PointLight thisLight = pointLights[i];
+                    outputColor += throughput * thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, thisLight.position, intersector, accelerationStructure);
                 }
 
                 // Quadlight: Using stratification
-                int root = sqrt(float(scene.lightsamples));
                 // Loop through each light
+                float3 Li = float3(0.0, 0.0, 0.0);
                 for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
-                    float3 color = float3(0.0, 0.0, 0.0);
-                    Quadlight thisLight = quadLights[lightID];
-
-                    // Loop through each sample
-                    for (int i = 0; i < root; i++) {
-                        for (int j = 0; j < root; j++) {
-                            //Generate two random numbers
-                            float one = 1.0f;
-                            Loki random1 = Loki(index, i, j);
-                            float x = modf(random1.rand(), one);
-                            Loki random2 = Loki(index, i, j+1);
-                            float y = modf(random2.rand(), one);
-
-                            // Stratify the sampling
-                            x = (i + x) / root;
-                            y = (j + y) / root;
-                            float3 position = thisLight.a + simd_float3(x, x, x) * thisLight.ab + simd_float3(y, y, y) * thisLight.ac;
-
-                            // Generate the ray
-                            ray shadowRay;
-                            float3 toLight = position - hitPosition;
-                            shadowRay.direction = normalize(toLight);
-                            shadowRay.origin = EPSILON * shadowRay.direction + hitPosition;
-                            shadowRay.max_distance = length(toLight) - EPSILON;
-
-                            // Check if it is blocked
-                            intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
-
-                            if (shadowIntersection.distance <= 0){
-                                color += computeShading(hitMaterial, -r.direction, toLight, hitNormal, thisLight.intensity);
-                            }
-
-                        }
-                    } // End of sample loops
-
-                    float area = length(cross(thisLight.ab, thisLight.ac));
-                    outputColor += color * area / (float)scene.lightsamples;
-
+                    
+                    Li += sampleQuadLight(intersector, accelerationStructure, quadLights[lightID], hitPosition, hitMaterial, hitNormal, -r.direction, scene.lightsamples, index);
                 } // End of quadLight Loop
+                outputColor += throughput * Li;
+                
+            } else {
+                outputColor += throughput * hitMaterial.emission;
             } // End of NEE if
             
             // TODO: Generate next ray
+            
             
             // TODO: Calculate BRDF value
             

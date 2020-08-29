@@ -82,6 +82,7 @@
 		B02B370E24F99490007B537C /* cornellCosine.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = cornellCosine.test; sourceTree = "<group>"; };
 		B02B371024F994C0007B537C /* scene6.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = scene6.test; sourceTree = "<group>"; };
 		B02B371124F9A996007B537C /* scene4-diffuse.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = "scene4-diffuse.test"; sourceTree = "<group>"; };
+		B02B371224F9B04F007B537C /* quad.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = quad.test; sourceTree = "<group>"; };
 		B060C86924B82E22004BB4ED /* MetalPerformanceShaders.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalPerformanceShaders.framework; path = System/Library/Frameworks/MetalPerformanceShaders.framework; sourceTree = SDKROOT; };
 		B066DAF324E5041200B7B3D9 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		B06CD10924C178EB00E155B0 /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
@@ -210,6 +211,7 @@
 			children = (
 				B02B370E24F99490007B537C /* cornellCosine.test */,
 				B02B371124F9A996007B537C /* scene4-diffuse.test */,
+				B02B371224F9B04F007B537C /* quad.test */,
 				B02B371024F994C0007B537C /* scene6.test */,
 			);
 			path = GPU;
