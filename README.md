@@ -15,6 +15,7 @@ This project is my CSE 168's course project on a new platform. Details regarding
 * `output outputName` Provides output name for the raytracer.  
 * `camera lookfromx lookfromy lookfromz lookatx lookaty lookatz upx upy upz fov` Provides information regarding camera's position and orientation.  
 * `lightsamples number` The number of samples we generate per quadlight.
+* `nee on/off` Turns on/off of next event estimation. The default is on, making this a path tracer.
 
 **Geometries**  
 * `sphere x y z radius` defines a sphere with given position and radius.  

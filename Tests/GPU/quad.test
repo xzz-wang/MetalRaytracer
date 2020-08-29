@@ -3,6 +3,7 @@ integrator direct
 lightsamples 9
 lightstratify on
 output quadTest.png
+maxDepth 5
 
 camera 0.0001 0 -4  0 0 0  0 1 0  45
 

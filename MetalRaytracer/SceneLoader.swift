@@ -108,7 +108,7 @@ class SceneLoader {
             if let arg2 = Int32(args[2]) {
                 scene.imageSize.y = arg2
             }
-        } else if command == "maxDepth" {
+        } else if command == "maxDepth" || command == "maxdepth" {
             if let depth = Int(args[1]) {
                 scene.maxDepth = depth
             }
@@ -121,6 +121,12 @@ class SceneLoader {
         } else if command == "lightsamples" {
             if let value = Int(args[1]) {
                 scene.lightsamples = value
+            }
+        } else if command == "nee" || command == "nexteventestimation" {
+            if args[1] == "off" || args[1] == "OFF" {
+                scene.neeOn = false;
+            } else {
+                scene.neeOn = true;
             }
             
         // MARK: Part 2: Camera and Geometry

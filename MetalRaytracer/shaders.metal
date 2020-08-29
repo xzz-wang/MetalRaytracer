@@ -52,7 +52,7 @@ inline RGBData float3ToRGB(simd_float3 value) {
 
 
 /**
- Conpute Phong model contribution: For Direct and Point lights
+ Conpute Phong model contribution: For Direct and Point lights, using half way vector
  */
 inline float3 computeShading(Material material, float3 inOmega, float3 normal, float3 hitPosition, float3 lightPosition, intersector<triangle_data> intersector, primitive_acceleration_structure accelerationStructure) {
     
@@ -82,26 +82,26 @@ inline float3 computeShading(Material material, float3 inOmega, float3 normal, f
 }
 
 inline float3 shadeQuad(float3 hitPosition, float3 hitNormal, float3 inOmega, Material hitMaterial, Quadlight light, float3 lightPosition, intersector<triangle_data> intersector, primitive_acceleration_structure accelerationStructure) {
+    
     float3 color = float3(0.0, 0.0, 0.0);
     float3 toLight = lightPosition - hitPosition;
     float3 outOmega = normalize(toLight);
     
+    // Setup the shadow ray
     ray shadowRay;
     shadowRay.direction = outOmega;
     shadowRay.max_distance = length(toLight) - EPSILON * 2;
     shadowRay.min_distance = 0.0;
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
 
+    // Find intersection
     intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
 
+    // Shade the intersection it is not blocked
     if (shadowIntersection.distance <= 0) {
-        
-        float3 r = reflect(-outOmega, hitNormal);
-
-        float3 f;
-
-        f = hitMaterial.diffuse / PI +
-        hitMaterial.specular / (2 * PI) * (hitMaterial.shininess + 2) * pow(dot(r, inOmega), hitMaterial.shininess);
+        Loki loki = Loki(1);
+        Phong_Importance_BRDF brdfObj = Phong_Importance_BRDF(hitMaterial, &loki);
+        float3 f = brdfObj.evaluate(inOmega, outOmega, hitNormal);
 
         float n_w = max(0.0, dot(hitNormal, outOmega));
 
@@ -248,15 +248,26 @@ void pathtracingKernel(uint2 idx2 [[thread_position_in_grid]],
                 outputColor += throughput * hitMaterial.ambient;
             } // End of NEE if
             
-            // TODO: Generate next ray
+            // MARK: Generate next ray
+            Loki loki = Loki(index);
+            Phong_Importance_BRDF brdfObj = Phong_Importance_BRDF(hitMaterial, &loki);
+            float3 sample = brdfObj.sample(hitNormal, -r.direction);
+            
+            if (sample.x == -1.0 && sample.y == -1.0 && sample.z == -1.0) {
+                break; // Reject the sample
+            }
+            
+            r.direction = sample;
+            r.origin = hitPosition + EPSILON * sample;
             
             
+            // MARK: Calculate BRDF value
+            float3 value = brdfObj.value(-r.direction, sample, hitNormal);
+            throughput *= value;
             
-            // TODO: Calculate BRDF value
-            
+        } else {
+            break;
         } // End of hit condition
-        // TODO: DEBUGING ONLY
-        break;
     }// End of depth loop
     
     outputBuffer[index] = float3ToRGB(outputColor);
