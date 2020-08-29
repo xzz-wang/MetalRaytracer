@@ -73,10 +73,13 @@ class SceneLoader {
             loadCommand(args: args)
         }
         
+        
+        
         setupCamera()
         
         scene.triVerts = triVerts
         scene.triMaterials = triMaterial
+        createQuadlightTri()
         
         scene.sphereTransforms = sphereTransforms
         scene.sphereMaterials = sphereMaterial
@@ -210,6 +213,9 @@ class SceneLoader {
                 if let rgb = loadVec3(args: args, startAt: 4) {
                     let newLight = DirectionalLight(toDirection: direction, brightness: rgb)
                     scene.directionalLights.append(newLight)
+                    
+                    // Create new triangles that represent the light
+                    
                 }
             }
         } else if command == "point" {
@@ -255,6 +261,28 @@ class SceneLoader {
         tempCamera.pixelDown = (-2.0 / Float(scene.imageSize.y)) * imagePlaneUp
         
         scene.camera = tempCamera
+    }
+    
+    
+    private func createQuadlightTri() {
+        for light in scene.quadLights {
+            
+            let lightMaterial = Material(diffuse: simd_float3(0.0, 0.0, 0.0),
+                                         specular: simd_float3(0.0, 0.0, 0.0),
+                                         emission: light.intensity,
+                                         ambient: simd_float3(0.0, 0.0, 0.0),
+                                         shininess: 1.0,
+                                         roughness: 0.0)
+            
+            let v0 = light.a;
+            let v1 = v0 + light.ac;
+            let v2 = v1 + light.ab;
+            let v3 = v0 + light.ab;
+            
+            // Triangle One
+            scene.triMaterials.append(contentsOf: [lightMaterial, lightMaterial])
+            scene.triVerts.append(contentsOf: [v0, v1, v2, v0, v2, v3])
+        }
     }
     
     
