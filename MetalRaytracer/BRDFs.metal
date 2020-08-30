@@ -17,7 +17,7 @@ using namespace raytracing;
 inline float3 rotateSample(float3 sample, float3 normal) {
     float3 w = normal;
     float3 u, v, temp;
-    if(normal[0] < 0.99) {
+    if(normal.x < 0.99 && normal.x > -0.99) {
         temp = float3(1.0, 0.0, 0.0);
     }
     else {
@@ -66,10 +66,10 @@ public:
     thread float3 evaluate(thread const float3 &inOmega, thread const float3 &outOmega, thread const float3 &normal) {
         // MARK: Add more supported brdf here
 
-        float3 r = reflect(-outOmega, normal);
+        float3 r = reflect(-inOmega, normal);
 
         float3 f = material.diffuse / M_PI_F +
-                material.specular / (2 * M_PI_F) * (material.shininess + 2) * pow(dot(r, inOmega), material.shininess);
+                material.specular / (2 * M_PI_F) * (material.shininess + 2) * pow(dot(r, outOmega), material.shininess);
         return f;
     }
     
@@ -79,7 +79,6 @@ public:
      */
     thread float3 sample(thread const float3 &normal,thread const float3 &inOmega) {
         // First, Split between the two terms
-        float3 seed = normal * 70 + inOmega * 30;
         float randNum = random();
 
         float kd_avg = (material.diffuse[0] + material.diffuse[1] + material.diffuse[2]) / 3.0;
@@ -106,7 +105,7 @@ public:
             float y = random();
             
             float theta = acos(pow(x, 1.0 / (material.shininess + 1.0)));
-            float phi = 2 * M_PI_F + y;
+            float phi = 2 * M_PI_F * y;
             float3 sample = float3(cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta));
             
             sample = rotateSample(sample, r);
@@ -121,7 +120,9 @@ public:
         }
     }// End of Sample
     
-    
+    /**
+     Returns the pdf of given sample.
+     */
     thread float3 pdf(thread const float3 &sample, thread const float3 &normal, thread const float3 &inOmega) {
         
         // Calculate the threshold

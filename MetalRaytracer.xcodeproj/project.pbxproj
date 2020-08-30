@@ -120,7 +120,6 @@
 			isa = PBXGroup;
 			children = (
 				B02B370F24F994A8007B537C /* GPU */,
-				B0D102A224DB544300D70CAF /* transformation.test */,
 				B000270E24D8EA3500780056 /* hw2 */,
 				B000271524D8EA3500780056 /* hw4 */,
 				B000271A24D8EA3500780056 /* hw3 */,
@@ -212,6 +211,7 @@
 		B02B370F24F994A8007B537C /* GPU */ = {
 			isa = PBXGroup;
 			children = (
+				B0D102A224DB544300D70CAF /* transformation.test */,
 				B02B370E24F99490007B537C /* cornellCosine.test */,
 				B02B371124F9A996007B537C /* scene4-diffuse.test */,
 				B02B371224F9B04F007B537C /* quad.test */,

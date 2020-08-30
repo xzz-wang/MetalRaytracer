@@ -248,22 +248,25 @@ void pathtracingKernel(uint2 idx2 [[thread_position_in_grid]],
                 outputColor += throughput * hitMaterial.ambient;
             } // End of NEE if
             
-            // MARK: Generate next ray
-            Loki loki = Loki(index);
+            // MARK: - Generate next ray
+            Loki loki = Loki(index, depth);
             Phong_Importance_BRDF brdfObj = Phong_Importance_BRDF(hitMaterial, &loki);
             float3 sample = brdfObj.sample(hitNormal, -r.direction);
             
             if (sample.x == -1.0 && sample.y == -1.0 && sample.z == -1.0) {
+//                outputColor = float3(1.0, 0.0, 0.0);
                 break; // Reject the sample
             }
+                        
+            // MARK: Calculate BRDF value
+//            float3 value = brdfObj.value(-r.direction, sample, hitNormal);
+            float3 value = brdfObj.evaluate(-r.direction, sample, hitNormal);
+            value *= dot(sample, hitNormal);
+            value /= brdfObj.pdf(sample, hitNormal, -r.direction);
+            throughput *= value;
             
             r.direction = sample;
             r.origin = hitPosition + EPSILON * sample;
-            
-            
-            // MARK: Calculate BRDF value
-            float3 value = brdfObj.value(-r.direction, sample, hitNormal);
-            throughput *= value;
             
         } else {
             break;
