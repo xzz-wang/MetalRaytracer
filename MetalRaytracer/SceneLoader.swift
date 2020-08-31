@@ -221,9 +221,6 @@ class SceneLoader {
                 if let rgb = loadVec3(args: args, startAt: 4) {
                     let newLight = DirectionalLight(toDirection: direction, brightness: rgb)
                     scene.directionalLights.append(newLight)
-                    
-                    // Create new triangles that represent the light
-                    
                 }
             }
         } else if command == "point" {

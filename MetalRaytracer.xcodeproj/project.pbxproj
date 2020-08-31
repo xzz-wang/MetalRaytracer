@@ -10,7 +10,8 @@
 		B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B008D1D024B6DF4B00D4C67E /* Scene.swift */; };
 		B066DAF424E5041200B7B3D9 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B066DAF324E5041200B7B3D9 /* Metal.framework */; };
 		B06BDFC024FACB3D002E5A1D /* BRDFs.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06BDFBF24FACB3D002E5A1D /* BRDFs.metal */; };
-		B06CD10A24C178EB00E155B0 /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06CD10924C178EB00E155B0 /* shaders.metal */; };
+		B06BDFC524FB3BF5002E5A1D /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06BDFC424FB3BF5002E5A1D /* shaders.metal */; };
+		B06CD10A24C178EB00E155B0 /* Pathtracer.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06CD10924C178EB00E155B0 /* Pathtracer.metal */; };
 		B06DF880249EC29300BD8145 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B06DF87F249EC29300BD8145 /* main.swift */; };
 		B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B07ADD0E24AAD130005BCD16 /* Engine.swift */; };
 		B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */ = {isa = PBXBuildFile; fileRef = B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */; };
@@ -89,7 +90,8 @@
 		B06BDFC124FAF0C4002E5A1D /* cornell.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = cornell.test; sourceTree = "<group>"; };
 		B06BDFC224FB212D002E5A1D /* dragonGGX.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = dragonGGX.test; sourceTree = "<group>"; };
 		B06BDFC324FB2162002E5A1D /* dragon.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = dragon.test; sourceTree = "<group>"; };
-		B06CD10924C178EB00E155B0 /* shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
+		B06BDFC424FB3BF5002E5A1D /* shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
+		B06CD10924C178EB00E155B0 /* Pathtracer.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = Pathtracer.metal; sourceTree = "<group>"; };
 		B06DF87C249EC29300BD8145 /* MetalRaytracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MetalRaytracer; sourceTree = BUILT_PRODUCTS_DIR; };
 		B06DF87F249EC29300BD8145 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		B07ADD0E24AAD130005BCD16 /* Engine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Engine.swift; sourceTree = "<group>"; };
@@ -261,7 +263,8 @@
 				B0BBC5E224B18578002B2EBD /* SceneLoader.swift */,
 				B0BBC5E424B18B21002B2EBD /* MML.swift */,
 				B0E5566224A5C76E00030471 /* Film.swift */,
-				B06CD10924C178EB00E155B0 /* shaders.metal */,
+				B06CD10924C178EB00E155B0 /* Pathtracer.metal */,
+				B06BDFC424FB3BF5002E5A1D /* shaders.metal */,
 				B06BDFBF24FACB3D002E5A1D /* BRDFs.metal */,
 				B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */,
 				B08CA25D24C16AC4007CDAD0 /* MetalRaytracer-Bridging-Header.h */,
@@ -341,7 +344,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B06CD10A24C178EB00E155B0 /* shaders.metal in Sources */,
+				B06CD10A24C178EB00E155B0 /* Pathtracer.metal in Sources */,
 				B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */,
 				B0D102A024DA80D200D70CAF /* loki.metal in Sources */,
 				B06DF880249EC29300BD8145 /* main.swift in Sources */,
@@ -349,6 +352,7 @@
 				B06BDFC024FACB3D002E5A1D /* BRDFs.metal in Sources */,
 				B07ADD0F24AAD130005BCD16 /* Engine.swift in Sources */,
 				B0E5566324A5C76E00030471 /* Film.swift in Sources */,
+				B06BDFC524FB3BF5002E5A1D /* shaders.metal in Sources */,
 				B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */,
 				B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */,
 				B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */,

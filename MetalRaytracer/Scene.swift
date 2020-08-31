@@ -126,6 +126,7 @@ class Scene {
         data.lightsamples = Int32(lightsamples)
         data.maxDepth = Int32(maxDepth)
         data.neeOn = neeOn ? 1 : 0
+        data.spp = Int32(spp)
         return data
     }
 }

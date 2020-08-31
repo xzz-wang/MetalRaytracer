@@ -20,6 +20,7 @@ class Engine {
     
     // Pipelines
     private var pathtracingPipeline: MTLComputePipelineState!
+    private var convertColorPipeline: MTLComputePipelineState!
     
     // Buffers
     // Acceleration Structure
@@ -35,6 +36,7 @@ class Engine {
 
     // Other buffers
     private var outputImageBuffer: MTLBuffer!
+    private var renderResultBuffer: MTLBuffer!
     
     
     /**
@@ -145,6 +147,14 @@ class Engine {
             return false
         }
         
+        // Initialize Rendering reuslt buffer
+        if let buffer = metalDevice!.makeBuffer(length: length * MemoryLayout<simd_float3>.size, options: .storageModeShared) {
+            renderResultBuffer = buffer
+        } else {
+            print("Unable to generate rendering reuslt buffer")
+            return false
+        }
+
         // Initialize lightBuffers
         if let dirBuffer = metalDevice!.makeBuffer(bytes: scene.directionalLights, length: scene.directionalLights.count * MemoryLayout<DirectionalLight>.size, options: .storageModeShared),
             let pointBuffer = metalDevice!.makeBuffer(bytes: scene.pointLights, length: scene.pointLights.count * MemoryLayout<PointLight>.size, options: .storageModeShared),
@@ -178,9 +188,14 @@ class Engine {
             return false
         }
         
+        guard let convertFunction = defaultLibrary.makeFunction(name: "convertToColorSpace") else {
+            print("Failed to fetch convert color space kernel")
+            return false;
+        }
+        
         do {
-            //pathtracingPipeline = try metalDevice?.makeComputePipelineState(function: pathtracingFunction)
             pathtracingPipeline = try metalDevice!.makeComputePipelineState(function: pathtracingFunction)
+            convertColorPipeline = try metalDevice.makeComputePipelineState(function: convertFunction)
         } catch {
             print("Failed to create Pipelines")
             return false
@@ -243,14 +258,23 @@ class Engine {
         mainKernelEncoder.setComputePipelineState(pathtracingPipeline)
         mainKernelEncoder.setBuffer(sceneDataBuffer, offset: 0, index: 0)
         mainKernelEncoder.setAccelerationStructure(accelerationStructure, bufferIndex: 1)
-        mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, outputImageBuffer], offsets: Array(repeating: 0, count: 6), range: 2..<8)
+        mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, renderResultBuffer], offsets: Array(repeating: 0, count: 6), range: 2..<8)
         
         
-        let threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
-        let threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
+        var threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
+        var threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
         mainKernelEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
         mainKernelEncoder.endEncoding()
                         
+        // MARK: Convert the output of the rendering
+        let convertKernelEncoder = commandBuffer.makeComputeCommandEncoder()!
+        convertKernelEncoder.setComputePipelineState(convertColorPipeline)
+        convertKernelEncoder.setBuffers([sceneDataBuffer, renderResultBuffer, outputImageBuffer], offsets: [0, 0, 0], range: 0..<3)
+        
+        threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
+        threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
+        convertKernelEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+        convertKernelEncoder.endEncoding()
         
         commandBuffer.commit()
         print("Command Comitted")

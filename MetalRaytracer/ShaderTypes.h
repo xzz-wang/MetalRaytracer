@@ -53,6 +53,7 @@ struct SceneData {
     int lightsamples;
     int neeOn; // A Boolean 1/0
     int maxDepth;
+    int spp;
 };
 
 struct RGBData {
