@@ -61,8 +61,6 @@ public:
      Note: inOmega is the camera direction, outOmega is the light direction.
      */
     thread float3 evaluate(thread const float3 &inOmega, thread const float3 &outOmega, thread const float3 &normal) {
-        // MARK: Add more supported brdf here
-
         float3 r = reflect(-inOmega, normal);
 
         float3 f = material.diffuse / M_PI_F +
@@ -100,6 +98,68 @@ public:
 
 
 
+/**
+ The class for basic Phong BRDF using Hemisphere sampling
+ */
+class Phong_Cosine_BRDF {
+private:
+    Material material;
+    thread Loki* loki;
+    
+    float random() {
+        return loki->rand();
+    }
+    
+public:
+    /**
+     Constructor that sets the material
+    */
+    Phong_Cosine_BRDF(Material material, thread Loki *setLoki ) {
+        this->material = material;
+        loki = setLoki;
+    };
+    
+    /**
+     Returns the value of BRDF with the given information.
+     Note: inOmega is the camera direction, outOmega is the light direction.
+     */
+    thread float3 evaluate(thread const float3 &inOmega, thread const float3 &outOmega, thread const float3 &normal) {
+        float3 r = reflect(-inOmega, normal);
+
+        float3 f = material.diffuse / M_PI_F +
+                material.specular / (2 * M_PI_F) * (material.shininess + 2) * pow(dot(r, outOmega), material.shininess);
+        return f;
+    }
+    
+    /**
+     Generate sample for the next ray
+     * Using Phone Importance sampling technique
+     */
+    thread float3 sample(thread const float3 &normal,thread const float3 &inOmega) {
+        float x = random();
+        float y = random();
+
+        float theta = acos(sqrt(x));
+        float gamma = 2 * PI * y;
+        float3 s = float3(cos(gamma) * sin(theta), sin(gamma) * sin(theta), cos(theta));
+
+        return rotateSample(s, normal);
+    }// End of Sample
+    
+    /**
+     Returns the pdf of given sample.
+     */
+    thread float3 pdf(thread const float3 &sample, thread const float3 &normal, thread const float3 &inOmega) {
+        return dot(normal, sample) / PI;
+    }
+    
+    thread float3 value(thread const float3 &inOmega, thread const float3 &outOmega, thread const float3 &normal) {
+        return evaluate(inOmega, outOmega, normal) * PI;
+    }
+};
+
+
+
 
 /**
  The phong brdf using brdf importance sampling
@@ -109,7 +169,7 @@ class Phong_Importance_BRDF {
 private:
     Material material;
     thread Loki* loki;
-    float threshold = 0.0;
+    float threshold;
     
     float random() {
         float num = loki->rand();
@@ -123,6 +183,14 @@ public:
     */
     Phong_Importance_BRDF(Material material, thread Loki *setLoki ) {
         this->material = material;
+        float kd_avg = (material.diffuse[0] + material.diffuse[1] + material.diffuse[2]) / 3.0;
+        float ks_avg = (material.specular[0] + material.specular[1] + material.specular[2]) / 3.0;
+        if (kd_avg + ks_avg > 0.0001) {
+            threshold = ks_avg / (kd_avg + ks_avg);
+        } else {
+            threshold = 1.0;
+        }
+        
         loki = setLoki;
     };
     
@@ -131,8 +199,6 @@ public:
      Note: inOmega is the camera direction, outOmega is the light direction.
      */
     thread float3 evaluate(thread const float3 &inOmega, thread const float3 &outOmega, thread const float3 &normal) {
-        // MARK: Add more supported brdf here
-
         float3 r = reflect(-inOmega, normal);
 
         float3 f = material.diffuse / M_PI_F +
@@ -147,10 +213,6 @@ public:
     thread float3 sample(thread const float3 &normal,thread const float3 &inOmega) {
         // First, Split between the two terms
         float randNum = random();
-
-        float kd_avg = (material.diffuse[0] + material.diffuse[1] + material.diffuse[2]) / 3.0;
-        float ks_avg = (material.specular[0] + material.specular[1] + material.specular[2]) / 3.0;
-        threshold = ks_avg / (kd_avg + ks_avg);
 
         // Determine if we sample specular or diffuse
         float3 r;
@@ -193,9 +255,9 @@ public:
 
         float3 r = reflect(-inOmega, normal);
 
-        float TWO_PI = 2 * M_PI_F;
-        float pdf = (1.0 - threshold) * dot(normal, sample) * M_1_PI_F
-                    + threshold * (material.shininess + 1.0) / TWO_PI * pow(dot(r, sample), material.shininess);
+        float TWO_PI = 2 * PI;
+        float pdf = (1.0 - threshold) * dot(normal, sample) / PI;
+        pdf += threshold * (material.shininess + 1.0) / TWO_PI * pow(dot(r, sample), material.shininess);
 
         return pdf;
     }

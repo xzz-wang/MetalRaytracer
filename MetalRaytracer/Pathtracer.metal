@@ -178,11 +178,11 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
     int index = idx3.x + scene.imageSize.x * idx3.y;
     Loki loki = Loki(idx3[0], idx3[1], idx3[2]);
     float3 outputColor = float3(0.0, 0.0, 0.0);
+    intersector<triangle_data> intersector;
     
     // Loop through each sample per pixel
     for (int i = 0; i < scene.spp; i++) {
         ray r = generateInitRay(idx3, scene, loki, i==0);
-        intersector<triangle_data> intersector;
         
         // Properties to be populated
         float3 throughput = float3(1.0, 1.0, 1.0);
@@ -247,21 +247,29 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
                 } // End of quadLight Loop
                 
             } else {
-                Li = hitMaterial.emission;
+                if (hitMaterial.emission.x > 0 || hitMaterial.emission.y > 0 || hitMaterial.emission.z > 0) {
+                    outputColor += throughput * hitMaterial.emission;
+                    break;
+                }
             } // End of NEE if
             
-            outputColor += throughput * Li / scene.spp;
+            outputColor += throughput * Li;
             
             // MARK: - Generate next ray
+//            Phong_Hemisphere_BRDF brdfObj = Phong_Hemisphere_BRDF(hitMaterial, &loki);
+//            Phong_Cosine_BRDF brdfObj = Phong_Cosine_BRDF(hitMaterial, &loki);
             Phong_Importance_BRDF brdfObj = Phong_Importance_BRDF(hitMaterial, &loki);
             float3 sample = brdfObj.sample(hitNormal, -r.direction);
             
             if (sample.x == -1.0 && sample.y == -1.0 && sample.z == -1.0) {
                 break; // Reject the sample
-            }
+            } 
                         
             // MARK: Calculate BRDF value
             float3 value = brdfObj.value(-r.direction, sample, hitNormal);
+//            float3 value = brdfObj.evaluate(-r.direction, sample, hitNormal);
+//            value *= dot(hitNormal, sample);
+//            value /= brdfObj.pdf(sample, hitNormal, -r.direction);
             throughput = throughput * value;
             
             r.direction = sample;
@@ -269,8 +277,7 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
             
         }// End of depth loop
         
-        
     } // End of sample loop
     
-    outputBuffer[index] += outputColor;
+    outputBuffer[index] += outputColor   / (float)scene.spp;
 }
