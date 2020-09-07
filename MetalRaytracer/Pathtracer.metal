@@ -176,12 +176,12 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
     
     // Initialization
     int index = idx3.x + scene.imageSize.x * idx3.y;
-    Loki loki = Loki(idx3[0], idx3[1], idx3[2]);
     float3 outputColor = float3(0.0, 0.0, 0.0);
     intersector<triangle_data> intersector;
     
     // Loop through each sample per pixel
     for (int i = 0; i < scene.spp; i++) {
+        Loki loki = Loki(idx3[0], idx3[1] + idx3[2], i);
         ray r = generateInitRay(idx3, scene, loki, i==0);
         
         // Properties to be populated

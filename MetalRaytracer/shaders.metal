@@ -30,3 +30,9 @@ void convertToColorSpace(uint2 idx2 [[thread_position_in_grid]],
     float3 color = shadingResult[index];
     imageData[index] = float3ToRGB(color);
 }
+
+
+//[[intersection(bounding_box)]]
+//bool sphereIntersectionFunction() {
+//    
+//}
