@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */ = {isa = PBXBuildFile; fileRef = B008D1D024B6DF4B00D4C67E /* Scene.swift */; };
+		B029721225102C6C0029AAC8 /* OCUtility.m in Sources */ = {isa = PBXBuildFile; fileRef = B029721125102C6C0029AAC8 /* OCUtility.m */; };
 		B066DAF424E5041200B7B3D9 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B066DAF324E5041200B7B3D9 /* Metal.framework */; };
 		B06BDFC024FACB3D002E5A1D /* BRDFs.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06BDFBF24FACB3D002E5A1D /* BRDFs.metal */; };
 		B06BDFC524FB3BF5002E5A1D /* shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = B06BDFC424FB3BF5002E5A1D /* shaders.metal */; };
@@ -80,6 +81,7 @@
 		B000273D24D8EA3500780056 /* obj.test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = obj.test; sourceTree = "<group>"; };
 		B000273E24D8EA3500780056 /* BOTTLE MID POLY.fbx */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BOTTLE MID POLY.fbx"; sourceTree = "<group>"; };
 		B008D1D024B6DF4B00D4C67E /* Scene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scene.swift; sourceTree = "<group>"; };
+		B029721125102C6C0029AAC8 /* OCUtility.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OCUtility.m; sourceTree = "<group>"; };
 		B02B370E24F99490007B537C /* cornellCosine.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = cornellCosine.test; sourceTree = "<group>"; };
 		B02B371024F994C0007B537C /* scene6.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = scene6.test; sourceTree = "<group>"; };
 		B02B371124F9A996007B537C /* scene4-diffuse.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = "scene4-diffuse.test"; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 				B06BDFC424FB3BF5002E5A1D /* shaders.metal */,
 				B06BDFBF24FACB3D002E5A1D /* BRDFs.metal */,
 				B08CA25E24C16AC5007CDAD0 /* ShaderTypes.h */,
+				B029721125102C6C0029AAC8 /* OCUtility.m */,
 				B08CA25D24C16AC4007CDAD0 /* MetalRaytracer-Bridging-Header.h */,
 			);
 			path = MetalRaytracer;
@@ -355,6 +358,7 @@
 				B06BDFC524FB3BF5002E5A1D /* shaders.metal in Sources */,
 				B008D1D124B6DF4B00D4C67E /* Scene.swift in Sources */,
 				B08CA25F24C16AC5007CDAD0 /* ShaderTypes.h in Sources */,
+				B029721225102C6C0029AAC8 /* OCUtility.m in Sources */,
 				B0BBC5E524B18B21002B2EBD /* MML.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

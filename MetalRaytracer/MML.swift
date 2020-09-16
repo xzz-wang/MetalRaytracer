@@ -52,5 +52,43 @@ class MML {
         return max(minVal, min(minVal, value))
     }
     
+    static func sphereBBoxOf(transform: simd_float4x4) -> BoundingBox {
+        var vertices: [simd_float3] = []
+        let r: Float = 0.5
+        vertices.append(simd_float3(r, r, r))
+        vertices.append(simd_float3(-r, r, r))
+        vertices.append(simd_float3(r, -r, r))
+        vertices.append(simd_float3(r, r, -r))
+        vertices.append(simd_float3(-r, -r, r))
+        vertices.append(simd_float3(-r, r, -r))
+        vertices.append(simd_float3(r, -r, -r))
+        vertices.append(simd_float3(-r, -r, -r))
+        
+        var min: simd_float3?
+        var max: simd_float3?
+        for vertex in vertices {
+            let transformed = transform * simd_float4(vertex, 1.0)
+            if min == nil && max == nil {
+                min = simd_float3(transformed.x, transformed.y, transformed.z)
+                max = simd_float3(transformed.x, transformed.y, transformed.z)
+            } else {
+                for i in 0..<3 {
+                    min![i] = min![i] > transformed[i] ? transformed[i] : min![i]
+                    max![i] = max![i] < transformed[i] ? transformed[i] : max![i]
+                }
+            }
+        }
+        
+        return BoundingBox(min: generatePackedFloat3(input: min!),
+                           max: generatePackedFloat3(input: max!))
+    }
+    
+    static func generatePackedFloat3(input: simd_float3) -> MTLPackedFloat3 {
+        var output: MTLPackedFloat3 = MTLPackedFloat3()
+        output.x = input.x
+        output.y = input.y
+        output.z = input.z
+        return output
+    }
 }
 

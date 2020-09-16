@@ -26,7 +26,6 @@ struct BoundingBox{
     packed_float3 max;
 };
 
-
 inline ray generateInitRay(uint3 idx3, constant SceneData & scene, thread Loki &loki, bool center) {
     float deltaX, deltaY;
     
@@ -54,7 +53,14 @@ inline ray generateInitRay(uint3 idx3, constant SceneData & scene, thread Loki &
 /**
  Conpute Phong model contribution: For Direct and Point lights, using half way vector
  */
-inline float3 computeShading(Material material, float3 inOmega, float3 normal, float3 hitPosition, float3 lightPosition, intersector<triangle_data> intersector, primitive_acceleration_structure accelerationStructure) {
+inline float3 computeShading(Material material,
+                             float3 inOmega,
+                             float3 normal,
+                             float3 hitPosition,
+                             float3 lightPosition,
+                             intersector<triangle_data, instancing> intersector,
+                             instance_acceleration_structure accelerationStructure,
+                             intersection_function_table<triangle_data, instancing> functionTable) {
     
     float3 toLight = lightPosition - hitPosition;
     float3 outOmega = normalize(toLight);
@@ -66,7 +72,7 @@ inline float3 computeShading(Material material, float3 inOmega, float3 normal, f
     shadowRay.min_distance = 0.0;
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
 
-    intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure, functionTable);
 
     if (shadowIntersection.distance <= 0) {
         
@@ -81,7 +87,15 @@ inline float3 computeShading(Material material, float3 inOmega, float3 normal, f
     
 }
 
-inline float3 shadeQuad(float3 hitPosition, float3 hitNormal, float3 inOmega, Material hitMaterial, Quadlight light, float3 lightPosition, intersector<triangle_data> intersector, primitive_acceleration_structure accelerationStructure) {
+inline float3 shadeQuad(float3 hitPosition,
+                        float3 hitNormal,
+                        float3 inOmega,
+                        Material hitMaterial,
+                        Quadlight light,
+                        float3 lightPosition,
+                        intersector<triangle_data, instancing> intersector,
+                        instance_acceleration_structure accelerationStructure,
+                        intersection_function_table<triangle_data, instancing> functionTable) {
     
     float3 color = float3(0.0, 0.0, 0.0);
     float3 toLight = lightPosition - hitPosition;
@@ -95,7 +109,7 @@ inline float3 shadeQuad(float3 hitPosition, float3 hitNormal, float3 inOmega, Ma
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
 
     // Find intersection
-    intersection_result<triangle_data> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure, functionTable);
 
     // Shade the intersection it is not blocked
     if (shadowIntersection.distance <= 0) {
@@ -120,8 +134,9 @@ inline float3 shadeQuad(float3 hitPosition, float3 hitNormal, float3 inOmega, Ma
 /**
  Sample the contribution of a quad light
  */
-inline float3 sampleQuadLight(intersector<triangle_data> intersector,
-                              primitive_acceleration_structure accelerationStructure,
+inline float3 sampleQuadLight(intersector<triangle_data, instancing> intersector,
+                              instance_acceleration_structure accelerationStructure,
+                              intersection_function_table<triangle_data, instancing> functionTable,
                               Quadlight light,
                               float3 hitPosition,
                               Material hitMaterial,
@@ -146,7 +161,7 @@ inline float3 sampleQuadLight(intersector<triangle_data> intersector,
             
             float3 position = light.a + x * light.ab + y * light.ac;
 
-            color += shadeQuad(hitPosition, hitNormal, inOmega, hitMaterial, light, position, intersector, accelerationStructure);
+            color += shadeQuad(hitPosition, hitNormal, inOmega, hitMaterial, light, position, intersector, accelerationStructure, functionTable);
         }
     }
 
@@ -163,7 +178,7 @@ inline float3 sampleQuadLight(intersector<triangle_data> intersector,
 [[kernel]]
 void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
                        constant SceneData & scene [[buffer(0)]],
-                       primitive_acceleration_structure accelerationStructure [[buffer(1)]],
+                       instance_acceleration_structure accelerationStructure [[buffer(1)]],
                         
                        device simd_float3 * triVertBuffer [[buffer(2)]],
                        device Material * triMaterialBuffer [[buffer(3)]],
@@ -172,12 +187,13 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
                        constant PointLight * pointLights [[buffer(5)]],
                        constant Quadlight * quadLights [[buffer(6)]],
 
-                       device simd_float3 * outputBuffer [[buffer(7)]]) {
+                       device simd_float3 * outputBuffer [[buffer(7)]],
+                       intersection_function_table<triangle_data, instancing> functionTable[[buffer(8)]]) {
     
     // Initialization
     int index = idx3.x + scene.imageSize.x * idx3.y;
     float3 outputColor = float3(0.0, 0.0, 0.0);
-    intersector<triangle_data> intersector;
+    intersector<triangle_data, instancing> intersector;
     
     // Loop through each sample per pixel
     for (int i = 0; i < scene.spp; i++) {
@@ -187,18 +203,24 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
         // Properties to be populated
         float3 throughput = float3(1.0, 1.0, 1.0);
 
-        
         // Loop according to depth
         for (int depth = 0; depth != scene.maxDepth; depth++) {
             
+            float3 hitNormal = float3(0.0, 0.0, 0.0);
+            
             // Find intersection
             intersector.accept_any_intersection(false);
-            intersection_result<triangle_data> intersection;
+            intersection_result<triangle_data, instancing> intersection;
             intersection = intersector.intersect(r, accelerationStructure);
             
             // stop if we did not hit anything
             if (intersection.distance <= 0) {
+                outputColor = float3(1.0, 0.0, 0.0);
                 break;
+            }
+            
+            if (intersection.instance_id == 0) {
+                // It's triangle
             }
                 
             // Get the hitNormal and hitMaterial
@@ -211,7 +233,11 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
             float z = 1.0 - x - y;
             
             float3 hitPosition = v2 * x + v3 * y + v1 * z;
-            float3 hitNormal = normalize(cross(v2 - v1, v3 - v1));
+            
+            if (length(hitNormal) == 0.0) {
+                hitNormal = normalize(cross(v2 - v1, v3 - v1));
+            }
+            
             Material hitMaterial = triMaterialBuffer[intersection.primitive_id];
             
             
@@ -232,18 +258,18 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
                 for (int i = 0; i < scene.directLightCount; i++) {
                     DirectionalLight thisLight = directionalLights[i];
                     float3 lightPos = hitPosition + MAXFLOAT * thisLight.toDirection;
-                    outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, lightPos, intersector, accelerationStructure);
+                    outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, lightPos, intersector, accelerationStructure, functionTable);
                 }
 
                 // Point Light
                 for (int i = 0; i < scene.pointLightCount; i++) {
                     PointLight thisLight = pointLights[i];
-                    outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, thisLight.position, intersector, accelerationStructure);
+                    outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, thisLight.position, intersector, accelerationStructure, functionTable);
                 }
 
                 // Quadlight: Loop through each light
                 for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
-                    Li += sampleQuadLight(intersector, accelerationStructure, quadLights[lightID], hitPosition, hitMaterial, hitNormal, -r.direction, scene.lightsamples, loki);
+                    Li += sampleQuadLight(intersector, accelerationStructure, functionTable, quadLights[lightID], hitPosition, hitMaterial, hitNormal, -r.direction, scene.lightsamples, loki);
                 } // End of quadLight Loop
                 
             } else {

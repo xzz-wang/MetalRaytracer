@@ -63,3 +63,8 @@ struct RGBData {
     uint8_t a;
 };
 
+struct Sphere {
+    simd_float4x4 forwardTransformation;
+    simd_float4x4 inverseTransformation;
+    struct Material material;
+};

@@ -43,8 +43,7 @@ class Scene {
     public var triVerts: [simd_float3] = []
     public var triMaterials: [Material] = []
     
-    public var sphereTransforms: [simd_float4x4] = []
-    public var sphereMaterials: [Material] = []
+    public var spheres: [Sphere] = []
     public var sphereBoundingBoxes: [BoundingBox] = []
     
     // Part three: Lights

@@ -23,8 +23,8 @@ class SceneLoader {
     var fieldOfView: Float?
 
     // Geometries
-    private var sphereTransforms: [simd_float4x4] = []
-    private var sphereMaterial: [Material] = []
+    private var spheres: [Sphere] = []
+    private var sphereBoundingBoxes: [BoundingBox] = []
     
     private var rawVerts: [simd_float3] = []
     private var triIndices: [Int] = []
@@ -83,8 +83,8 @@ class SceneLoader {
         scene.triMaterials = triMaterial
         createQuadlightTri()
         
-        scene.sphereTransforms = sphereTransforms
-        scene.sphereMaterials = sphereMaterial
+        scene.spheres = spheres
+        scene.sphereBoundingBoxes = sphereBoundingBoxes
         
         scene.makeLightPlaceholders()
         
@@ -138,12 +138,18 @@ class SceneLoader {
                         
         } else if command == "sphere" {
             if let loc = loadVec3(args: args, startAt: 1), let radius = Float(args[4]) {
+                
                 var transform = curTransform
                 transform = MML.translate(mat: transform, by: loc)
                 transform = MML.scale(mat: transform, by: simd_float3(repeating: radius))
+                let inv = simd_inverse(transform)
+                let newSphere: Sphere = Sphere(forwardTransformation: transform,
+                                               inverseTransformation: inv,
+                                               material: curMaterial)
+                spheres.append(newSphere)
                 
-                sphereTransforms.append(transform)
-                sphereMaterial.append(curMaterial)
+                // Now calculate the boundingBox
+                sphereBoundingBoxes.append(MML.sphereBBoxOf(transform: transform))
             }
             
         } else if command == "vertex" {

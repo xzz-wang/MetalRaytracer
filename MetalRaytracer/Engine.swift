@@ -22,13 +22,18 @@ class Engine {
     private var pathtracingPipeline: MTLComputePipelineState!
     private var convertColorPipeline: MTLComputePipelineState!
     
+    private var intersectionFunctionTable: MTLIntersectionFunctionTable!
+
     // Buffers
     // Acceleration Structure
     private var triVertexBuffer: MTLBuffer!
+    private var sphereBBoxBuffer: MTLBuffer!
+    private var instBUffer: MTLBuffer!
     
     // Read-only Buffers
     private var sceneDataBuffer: MTLBuffer!
     private var triMaterialBuffer: MTLBuffer!
+    private var sphereBuffer: MTLBuffer!
     
     private var directionalLightBuffer: MTLBuffer!
     private var pointLightBuffer: MTLBuffer!
@@ -61,36 +66,9 @@ class Engine {
     }
     
     
-    /**
-     Setup required metal objects
-     */
-    private func setupAccelerationStructure() -> Bool {
-        
-        /* SETUP acceleration Structure */
-        // make triangle vertex buffer
-        // Make the vertex position buffer
-        guard let buffer = metalDevice.makeBuffer(bytes: scene.triVerts, length: MemoryLayout<simd_float3>.size * scene.triVerts.count, options: .storageModeShared) else {
-            print("Failed to make vertexPositionBuffer!")
-            return false
-        }
-        triVertexBuffer = buffer
-
-        // Now acceleration structure itself
-        let accelerationStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
-        
-        // greate geometry descriptor
-        let triGeometryDescriptor = MTLAccelerationStructureTriangleGeometryDescriptor()
-        triGeometryDescriptor.vertexBuffer = triVertexBuffer
-        triGeometryDescriptor.triangleCount = scene.triVerts.count / 3
-        triGeometryDescriptor.vertexStride = MemoryLayout<simd_float3>.size
-        
-//        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
-//        sphereGeometryDescriptor.boundingBoxBuffer
-        
-        accelerationStructureDescriptor.geometryDescriptors = [ triGeometryDescriptor ]
-        
+    private func buildAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor, commandQueue: MTLCommandQueue) -> MTLAccelerationStructure {
         // Allocate space
-        let sizes = metalDevice.accelerationStructureSizes(descriptor: accelerationStructureDescriptor)
+        let sizes = metalDevice.accelerationStructureSizes(descriptor: descriptor)
         accelerationStructure = metalDevice.makeAccelerationStructure(size: sizes.accelerationStructureSize)!
         let scratchBuffer = metalDevice.makeBuffer(length: sizes.buildScratchBufferSize, options: .storageModePrivate)!
         
@@ -98,12 +76,70 @@ class Engine {
         let commandBuffer = commandQueue.makeCommandBuffer()!
         let commandEncoder = commandBuffer.makeAccelerationStructureCommandEncoder()!
         commandEncoder.build(accelerationStructure: accelerationStructure,
-                                                descriptor: accelerationStructureDescriptor,
+                                                descriptor: descriptor,
                                                 scratchBuffer: scratchBuffer,
                                                 scratchBufferOffset: 0)
         commandEncoder.endEncoding()
         commandBuffer.commit()
+        
+        return accelerationStructure
 
+    }
+    
+    
+    /**
+     Setup required metal objects
+     */
+    private func setupAccelerationStructure() -> Bool {
+                
+        /* SETUP acceleration Structure */
+        // acceleration structure itself
+        let instanceAccelStructureDescriptor = MTLInstanceAccelerationStructureDescriptor()
+        
+        
+        // create the triangle acceleration structure
+        let triGeometryDescriptor = MTLAccelerationStructureTriangleGeometryDescriptor()
+        triGeometryDescriptor.vertexBuffer = triVertexBuffer
+        triGeometryDescriptor.triangleCount = scene.triVerts.count / 3
+        triGeometryDescriptor.vertexStride = MemoryLayout<simd_float3>.size
+        triGeometryDescriptor.intersectionFunctionTableOffset = 0
+        
+        let triAccelStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
+        triAccelStructureDescriptor.geometryDescriptors = [triGeometryDescriptor]
+        let triAccelerationStructure = buildAccelerationStructure(descriptor: triAccelStructureDescriptor, commandQueue: commandQueue)
+        
+        
+        // Create the sphere acceleration structure
+        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
+        sphereGeometryDescriptor.boundingBoxBuffer = sphereBBoxBuffer
+        sphereGeometryDescriptor.boundingBoxStride = MemoryLayout<BoundingBox>.size
+        sphereGeometryDescriptor.intersectionFunctionTableOffset = 0
+        
+        let sphereAccelStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
+        sphereAccelStructureDescriptor.geometryDescriptors = [sphereGeometryDescriptor]
+        let sphereAccelerationStructure = buildAccelerationStructure(descriptor: sphereAccelStructureDescriptor, commandQueue: commandQueue)
+        
+        
+        // Create the instance acceleration Structure
+        let identityMatrix = MTLPackedFloat4x3()
+        
+        var triInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
+        triInstanceDescriptor.accelerationStructureIndex = 0
+        triInstanceDescriptor.intersectionFunctionTableOffset = 0
+        triInstanceDescriptor.transformationMatrix = identityMatrix
+
+        var sphereInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
+        sphereInstanceDescriptor.accelerationStructureIndex = 1
+        sphereInstanceDescriptor.intersectionFunctionTableOffset = 1
+        sphereInstanceDescriptor.transformationMatrix = identityMatrix
+        
+        instanceAccelStructureDescriptor.instanceCount = 2
+        let instances = [triInstanceDescriptor, sphereInstanceDescriptor]
+        let instanceDescriptorBuffer = metalDevice.makeBuffer(bytes: instances, length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.size * instances.count, options: .storageModeShared)
+        instanceAccelStructureDescriptor.instanceDescriptorBuffer = instanceDescriptorBuffer
+        instanceAccelStructureDescriptor.instancedAccelerationStructures = [triAccelerationStructure, sphereAccelerationStructure]
+        accelerationStructure = buildAccelerationStructure(descriptor: instanceAccelStructureDescriptor, commandQueue: commandQueue)
+        
         return true
     }
     
@@ -114,46 +150,46 @@ class Engine {
     private func setupBuffers() -> Bool {
         let length = Int(scene.imageSize.x * scene.imageSize.y)
         
+        var failed = false
+        
         // Initialize SceneData buffer
         let data = [scene.getSceneData()]
         if let buffer = metalDevice!.makeBuffer(bytes: data ,length: MemoryLayout<SceneData>.size, options: .storageModeShared) {
             sceneDataBuffer = buffer
-        } else {
-            print("Unable to initialize sceneDataBuffer!")
-            return false
-        }
+        } else { failed = true }
         
         // Initialize Vertex Buffer
         if let buffer = metalDevice!.makeBuffer(bytes: scene.triVerts, length: scene.triVerts.count * MemoryLayout<simd_float3>.size, options: .storageModeShared) {
             triVertexBuffer = buffer
-        } else {
-            print("Unable to generate vertex buffer")
-            return false
-        }
+        } else { failed = true }
         
         // Initialize Triangle Material
         if let buffer = metalDevice!.makeBuffer(bytes: scene.triMaterials, length: scene.triMaterials.count * MemoryLayout<Material>.size, options: .storageModeShared) {
             triMaterialBuffer = buffer
-        } else {
-            print("Unable to generate material buffer")
-            return false
-        }
+        } else { failed = true }
+        
+        // Initialize Sphere Buffer
+        if let buffer = metalDevice!.makeBuffer(bytes: scene.spheres, length: scene.spheres.count * MemoryLayout<Sphere>.size, options: .storageModeShared) {
+            sphereBuffer = buffer
+        } else { failed = true }
+        
+        // Initialize Instance Buffer & data
+        
+        // Initialize Sphere BBox buffer
+        if let buffer = metalDevice!.makeBuffer(bytes: scene.sphereBoundingBoxes, length: scene.sphereBoundingBoxes.count * MemoryLayout<BoundingBox>.size, options: .storageModeShared) {
+            sphereBBoxBuffer = buffer
+        } else { failed = true }
+        
 
         // Initialize Output Image data Buffer
         if let buffer = metalDevice!.makeBuffer(length: length * MemoryLayout<RGBData>.size, options: .storageModeShared) {
             outputImageBuffer = buffer
-        } else {
-            print("Unable to generate output buffer")
-            return false
-        }
+        } else { failed = true }
         
         // Initialize Rendering reuslt buffer
         if let buffer = metalDevice!.makeBuffer(length: length * MemoryLayout<simd_float3>.size, options: .storageModeShared) {
             renderResultBuffer = buffer
-        } else {
-            print("Unable to generate rendering reuslt buffer")
-            return false
-        }
+        } else { failed = true }
 
         // Initialize lightBuffers
         if let dirBuffer = metalDevice!.makeBuffer(bytes: scene.directionalLights, length: scene.directionalLights.count * MemoryLayout<DirectionalLight>.size, options: .storageModeShared),
@@ -162,13 +198,13 @@ class Engine {
             directionalLightBuffer = dirBuffer
             pointLightBuffer = pointBuffer
             quadLightBuffer = quadBuffer
-        } else {
-            print("Unable to generate light buffer")
-            return false
-        }
-
+        } else { failed = true }
         
-        return true
+        if (failed) {
+            print("ERROR: Buffer initialization failed!")
+        }
+        
+        return !failed
     }
     
     
@@ -193,13 +229,35 @@ class Engine {
             return false;
         }
         
+        
+        // Get the intersection functions
+        let sphereIntersectionFunction = defaultLibrary.makeFunction(name: "sphereIntersectionFunction")!
+        let linkedFunctions = MTLLinkedFunctions()
+        linkedFunctions.functions = [sphereIntersectionFunction]
+        
+        // Line the intersection to the descriptor
+        let raytracingPipelineDescriptor = MTLComputePipelineDescriptor()
+        raytracingPipelineDescriptor.linkedFunctions = linkedFunctions
+        raytracingPipelineDescriptor.computeFunction = pathtracingFunction
+        
+        
         do {
-            pathtracingPipeline = try metalDevice!.makeComputePipelineState(function: pathtracingFunction)
+            pathtracingPipeline = try metalDevice!.makeComputePipelineState(descriptor: raytracingPipelineDescriptor, options: [], reflection: nil)
             convertColorPipeline = try metalDevice.makeComputePipelineState(function: convertFunction)
         } catch {
             print("Failed to create Pipelines")
             return false
         }
+        
+        /* Setup intersection function table */
+        let intersectionFunctionTableDescriptor = MTLIntersectionFunctionTableDescriptor()
+        intersectionFunctionTableDescriptor.functionCount = 2
+        
+        // The only sphere intersection function
+        intersectionFunctionTable = pathtracingPipeline.makeIntersectionFunctionTable(descriptor: intersectionFunctionTableDescriptor)!
+        let functionHandle = pathtracingPipeline.functionHandle(function: sphereIntersectionFunction)
+        intersectionFunctionTable.setOpaqueTriangleIntersectionFunction(signature: .triangleData, index: 0)
+        intersectionFunctionTable.setFunction(functionHandle, index: 1)
 
         
         guard let queue = metalDevice?.makeCommandQueue() else {
@@ -211,9 +269,9 @@ class Engine {
         return true
     }
     
+    
+    
     // MARK: - Here's the main function. Everything starts here.
-    
-    
     /**
      The core of the rendering engine. Everything goes here.
      */
@@ -259,6 +317,7 @@ class Engine {
         mainKernelEncoder.setBuffer(sceneDataBuffer, offset: 0, index: 0)
         mainKernelEncoder.setAccelerationStructure(accelerationStructure, bufferIndex: 1)
         mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, renderResultBuffer], offsets: Array(repeating: 0, count: 6), range: 2..<8)
+        mainKernelEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 8)
         
         
         var threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
