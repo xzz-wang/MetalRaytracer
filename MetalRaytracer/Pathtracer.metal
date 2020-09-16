@@ -72,7 +72,7 @@ inline float3 computeShading(Material material,
     shadowRay.min_distance = 0.0;
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
 
-    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure, functionTable);
+    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
 
     if (shadowIntersection.distance <= 0) {
         
@@ -109,7 +109,7 @@ inline float3 shadeQuad(float3 hitPosition,
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
 
     // Find intersection
-    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure, functionTable);
+    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
 
     // Shade the intersection it is not blocked
     if (shadowIntersection.distance <= 0) {
@@ -214,15 +214,10 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
             intersection = intersector.intersect(r, accelerationStructure);
             
             // stop if we did not hit anything
-            if (intersection.distance <= 0) {
-                outputColor = float3(1.0, 0.0, 0.0);
+            if (intersection.distance <= 0.0) {
                 break;
             }
             
-            if (intersection.instance_id == 0) {
-                // It's triangle
-            }
-                
             // Get the hitNormal and hitMaterial
             float3 v1 = triVertBuffer[3 * intersection.primitive_id + 0];
             float3 v2 = triVertBuffer[3 * intersection.primitive_id + 1];
@@ -233,13 +228,13 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
             float z = 1.0 - x - y;
             
             float3 hitPosition = v2 * x + v3 * y + v1 * z;
-            
+//            float3 hitPosition = r.origin + intersection.distance * r.direction;
+
             if (length(hitNormal) == 0.0) {
                 hitNormal = normalize(cross(v2 - v1, v3 - v1));
             }
             
             Material hitMaterial = triMaterialBuffer[intersection.primitive_id];
-            
             
             // MARK: - NEE pathtracing contribution
             float3 Li = float3(0.0, 0.0, 0.0);
@@ -282,8 +277,6 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
             outputColor += throughput * Li;
             
             // MARK: - Generate next ray
-//            Phong_Hemisphere_BRDF brdfObj = Phong_Hemisphere_BRDF(hitMaterial, &loki);
-//            Phong_Cosine_BRDF brdfObj = Phong_Cosine_BRDF(hitMaterial, &loki);
             Phong_Importance_BRDF brdfObj = Phong_Importance_BRDF(hitMaterial, &loki);
             float3 sample = brdfObj.sample(hitNormal, -r.direction);
             
@@ -293,9 +286,6 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
                         
             // MARK: Calculate BRDF value
             float3 value = brdfObj.value(-r.direction, sample, hitNormal);
-//            float3 value = brdfObj.evaluate(-r.direction, sample, hitNormal);
-//            value *= dot(hitNormal, sample);
-//            value /= brdfObj.pdf(sample, hitNormal, -r.direction);
             throughput = throughput * value;
             
             r.direction = sample;

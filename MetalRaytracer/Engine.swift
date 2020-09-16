@@ -69,20 +69,20 @@ class Engine {
     private func buildAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor, commandQueue: MTLCommandQueue) -> MTLAccelerationStructure {
         // Allocate space
         let sizes = metalDevice.accelerationStructureSizes(descriptor: descriptor)
-        accelerationStructure = metalDevice.makeAccelerationStructure(size: sizes.accelerationStructureSize)!
+        let thisAccelerationStructure = metalDevice.makeAccelerationStructure(size: sizes.accelerationStructureSize)!
         let scratchBuffer = metalDevice.makeBuffer(length: sizes.buildScratchBufferSize, options: .storageModePrivate)!
         
         // Build the acceleration structure
         let commandBuffer = commandQueue.makeCommandBuffer()!
         let commandEncoder = commandBuffer.makeAccelerationStructureCommandEncoder()!
-        commandEncoder.build(accelerationStructure: accelerationStructure,
+        commandEncoder.build(accelerationStructure: thisAccelerationStructure,
                                                 descriptor: descriptor,
                                                 scratchBuffer: scratchBuffer,
                                                 scratchBufferOffset: 0)
         commandEncoder.endEncoding()
         commandBuffer.commit()
         
-        return accelerationStructure
+        return thisAccelerationStructure
 
     }
     
@@ -96,7 +96,6 @@ class Engine {
         // acceleration structure itself
         let instanceAccelStructureDescriptor = MTLInstanceAccelerationStructureDescriptor()
         
-        
         // create the triangle acceleration structure
         let triGeometryDescriptor = MTLAccelerationStructureTriangleGeometryDescriptor()
         triGeometryDescriptor.vertexBuffer = triVertexBuffer
@@ -109,35 +108,39 @@ class Engine {
         let triAccelerationStructure = buildAccelerationStructure(descriptor: triAccelStructureDescriptor, commandQueue: commandQueue)
         
         
-        // Create the sphere acceleration structure
-        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
-        sphereGeometryDescriptor.boundingBoxBuffer = sphereBBoxBuffer
-        sphereGeometryDescriptor.boundingBoxStride = MemoryLayout<BoundingBox>.size
-        sphereGeometryDescriptor.intersectionFunctionTableOffset = 0
-        
-        let sphereAccelStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
-        sphereAccelStructureDescriptor.geometryDescriptors = [sphereGeometryDescriptor]
-        let sphereAccelerationStructure = buildAccelerationStructure(descriptor: sphereAccelStructureDescriptor, commandQueue: commandQueue)
+//        // Create the sphere acceleration structure
+//        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
+//        sphereGeometryDescriptor.boundingBoxBuffer = sphereBBoxBuffer
+//        sphereGeometryDescriptor.boundingBoxStride = MemoryLayout<BoundingBox>.size
+//        sphereGeometryDescriptor.intersectionFunctionTableOffset = 0
+//
+//        let sphereAccelStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
+//        sphereAccelStructureDescriptor.geometryDescriptors = [sphereGeometryDescriptor]
+//        let sphereAccelerationStructure = buildAccelerationStructure(descriptor: sphereAccelStructureDescriptor, commandQueue: commandQueue)
         
         
         // Create the instance acceleration Structure
-        let identityMatrix = MTLPackedFloat4x3()
+        var identityMatrix = MTLPackedFloat4x3()
+        identityMatrix.columns.0.x = 1.0
+        identityMatrix.columns.1.y = 1.0
+        identityMatrix.columns.2.z = 1.0
         
         var triInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
         triInstanceDescriptor.accelerationStructureIndex = 0
-        triInstanceDescriptor.intersectionFunctionTableOffset = 0
+//        triInstanceDescriptor.intersectionFunctionTableOffset = 0
         triInstanceDescriptor.transformationMatrix = identityMatrix
+        triInstanceDescriptor.mask = UInt32.max
 
-        var sphereInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
-        sphereInstanceDescriptor.accelerationStructureIndex = 1
-        sphereInstanceDescriptor.intersectionFunctionTableOffset = 1
-        sphereInstanceDescriptor.transformationMatrix = identityMatrix
+//        var sphereInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
+//        sphereInstanceDescriptor.accelerationStructureIndex = 1
+//        sphereInstanceDescriptor.intersectionFunctionTableOffset = 1
+//        sphereInstanceDescriptor.transformationMatrix = identityMatrix
         
-        instanceAccelStructureDescriptor.instanceCount = 2
-        let instances = [triInstanceDescriptor, sphereInstanceDescriptor]
-        let instanceDescriptorBuffer = metalDevice.makeBuffer(bytes: instances, length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.size * instances.count, options: .storageModeShared)
+        instanceAccelStructureDescriptor.instanceCount = 1
+        let instances = [triInstanceDescriptor]
+        let instanceDescriptorBuffer = metalDevice.makeBuffer(bytes: instances, length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.size * instances.count, options: .storageModeManaged)
         instanceAccelStructureDescriptor.instanceDescriptorBuffer = instanceDescriptorBuffer
-        instanceAccelStructureDescriptor.instancedAccelerationStructures = [triAccelerationStructure, sphereAccelerationStructure]
+        instanceAccelStructureDescriptor.instancedAccelerationStructures = [triAccelerationStructure]
         accelerationStructure = buildAccelerationStructure(descriptor: instanceAccelStructureDescriptor, commandQueue: commandQueue)
         
         return true

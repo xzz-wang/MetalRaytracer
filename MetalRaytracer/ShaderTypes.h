@@ -8,6 +8,7 @@
 #pragma once
 #import <simd/simd.h>
 
+
 // Types
 struct Camera {
     simd_float3 origin;
