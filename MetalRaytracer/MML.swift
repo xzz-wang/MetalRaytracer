@@ -54,7 +54,7 @@ class MML {
     
     static func sphereBBoxOf(transform: simd_float4x4) -> BoundingBox {
         var vertices: [simd_float3] = []
-        let r: Float = 0.5
+        let r: Float = 1.0
         vertices.append(simd_float3(r, r, r))
         vertices.append(simd_float3(-r, r, r))
         vertices.append(simd_float3(r, -r, r))

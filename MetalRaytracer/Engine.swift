@@ -108,15 +108,17 @@ class Engine {
         let triAccelerationStructure = buildAccelerationStructure(descriptor: triAccelStructureDescriptor, commandQueue: commandQueue)
         
         
-//        // Create the sphere acceleration structure
-//        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
-//        sphereGeometryDescriptor.boundingBoxBuffer = sphereBBoxBuffer
-//        sphereGeometryDescriptor.boundingBoxStride = MemoryLayout<BoundingBox>.size
-//        sphereGeometryDescriptor.intersectionFunctionTableOffset = 0
-//
-//        let sphereAccelStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
-//        sphereAccelStructureDescriptor.geometryDescriptors = [sphereGeometryDescriptor]
-//        let sphereAccelerationStructure = buildAccelerationStructure(descriptor: sphereAccelStructureDescriptor, commandQueue: commandQueue)
+        // Create the sphere acceleration structure
+        let sphereGeometryDescriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
+        sphereGeometryDescriptor.boundingBoxBuffer = sphereBBoxBuffer
+        sphereGeometryDescriptor.boundingBoxBufferOffset = 0
+        sphereGeometryDescriptor.boundingBoxCount = scene.sphereBoundingBoxes.count
+        sphereGeometryDescriptor.boundingBoxStride = MemoryLayout<BoundingBox>.stride
+        sphereGeometryDescriptor.intersectionFunctionTableOffset = 1
+
+        let sphereAccelStructureDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
+        sphereAccelStructureDescriptor.geometryDescriptors = [sphereGeometryDescriptor]
+        let sphereAccelerationStructure = buildAccelerationStructure(descriptor: sphereAccelStructureDescriptor, commandQueue: commandQueue)
         
         
         // Create the instance acceleration Structure
@@ -127,20 +129,21 @@ class Engine {
         
         var triInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
         triInstanceDescriptor.accelerationStructureIndex = 0
-//        triInstanceDescriptor.intersectionFunctionTableOffset = 0
+        triInstanceDescriptor.intersectionFunctionTableOffset = 0
         triInstanceDescriptor.transformationMatrix = identityMatrix
         triInstanceDescriptor.mask = UInt32.max
 
-//        var sphereInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
-//        sphereInstanceDescriptor.accelerationStructureIndex = 1
-//        sphereInstanceDescriptor.intersectionFunctionTableOffset = 1
-//        sphereInstanceDescriptor.transformationMatrix = identityMatrix
+        var sphereInstanceDescriptor = MTLAccelerationStructureInstanceDescriptor()
+        sphereInstanceDescriptor.accelerationStructureIndex = 1
+        sphereInstanceDescriptor.intersectionFunctionTableOffset = 0
+        sphereInstanceDescriptor.transformationMatrix = identityMatrix
+        sphereInstanceDescriptor.mask = UInt32.max
         
-        instanceAccelStructureDescriptor.instanceCount = 1
-        let instances = [triInstanceDescriptor]
+        instanceAccelStructureDescriptor.instanceCount = 2
+        let instances = [triInstanceDescriptor, sphereInstanceDescriptor]
         let instanceDescriptorBuffer = metalDevice.makeBuffer(bytes: instances, length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.size * instances.count, options: .storageModeManaged)
         instanceAccelStructureDescriptor.instanceDescriptorBuffer = instanceDescriptorBuffer
-        instanceAccelStructureDescriptor.instancedAccelerationStructures = [triAccelerationStructure]
+        instanceAccelStructureDescriptor.instancedAccelerationStructures = [triAccelerationStructure, sphereAccelerationStructure]
         accelerationStructure = buildAccelerationStructure(descriptor: instanceAccelStructureDescriptor, commandQueue: commandQueue)
         
         return true
@@ -259,8 +262,9 @@ class Engine {
         // The only sphere intersection function
         intersectionFunctionTable = pathtracingPipeline.makeIntersectionFunctionTable(descriptor: intersectionFunctionTableDescriptor)!
         let functionHandle = pathtracingPipeline.functionHandle(function: sphereIntersectionFunction)
-        intersectionFunctionTable.setOpaqueTriangleIntersectionFunction(signature: .triangleData, index: 0)
+        intersectionFunctionTable.setOpaqueTriangleIntersectionFunction(signature: .instancing, index: 0)
         intersectionFunctionTable.setFunction(functionHandle, index: 1)
+        intersectionFunctionTable.setBuffer(sphereBuffer, offset: 0, index: 0)
 
         
         guard let queue = metalDevice?.makeCommandQueue() else {
@@ -319,8 +323,8 @@ class Engine {
         mainKernelEncoder.setComputePipelineState(pathtracingPipeline)
         mainKernelEncoder.setBuffer(sceneDataBuffer, offset: 0, index: 0)
         mainKernelEncoder.setAccelerationStructure(accelerationStructure, bufferIndex: 1)
-        mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, renderResultBuffer], offsets: Array(repeating: 0, count: 6), range: 2..<8)
-        mainKernelEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 8)
+        mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, sphereBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, renderResultBuffer], offsets: Array(repeating: 0, count: 7), range: 2..<9)
+        mainKernelEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 9)
         
         
         var threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)

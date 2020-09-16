@@ -72,7 +72,7 @@ inline float3 computeShading(Material material,
     shadowRay.min_distance = 0.0;
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
 
-    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure, functionTable);
 
     if (shadowIntersection.distance <= 0) {
         
@@ -109,7 +109,7 @@ inline float3 shadeQuad(float3 hitPosition,
     shadowRay.origin = hitPosition + EPSILON * shadowRay.direction;
 
     // Find intersection
-    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure);
+    intersection_result<triangle_data, instancing> shadowIntersection = intersector.intersect(shadowRay, accelerationStructure, functionTable);
 
     // Shade the intersection it is not blocked
     if (shadowIntersection.distance <= 0) {
@@ -182,13 +182,14 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
                         
                        device simd_float3 * triVertBuffer [[buffer(2)]],
                        device Material * triMaterialBuffer [[buffer(3)]],
+                       device Sphere * sphereBuffer[[buffer(4)]],
                               
-                       constant DirectionalLight * directionalLights [[buffer(4)]],
-                       constant PointLight * pointLights [[buffer(5)]],
-                       constant Quadlight * quadLights [[buffer(6)]],
+                       constant DirectionalLight * directionalLights [[buffer(5)]],
+                       constant PointLight * pointLights [[buffer(6)]],
+                       constant Quadlight * quadLights [[buffer(7)]],
 
-                       device simd_float3 * outputBuffer [[buffer(7)]],
-                       intersection_function_table<triangle_data, instancing> functionTable[[buffer(8)]]) {
+                       device simd_float3 * outputBuffer [[buffer(8)]],
+                       intersection_function_table<triangle_data, instancing> functionTable[[buffer(9)]]) {
     
     // Initialization
     int index = idx3.x + scene.imageSize.x * idx3.y;
@@ -206,35 +207,40 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
         // Loop according to depth
         for (int depth = 0; depth != scene.maxDepth; depth++) {
             
-            float3 hitNormal = float3(0.0, 0.0, 0.0);
+            float3 hitPosition, hitNormal;
+            Material hitMaterial;
             
             // Find intersection
             intersector.accept_any_intersection(false);
             intersection_result<triangle_data, instancing> intersection;
-            intersection = intersector.intersect(r, accelerationStructure);
+            intersection = intersector.intersect(r, accelerationStructure, functionTable, hitNormal);
             
             // stop if we did not hit anything
             if (intersection.distance <= 0.0) {
                 break;
             }
             
-            // Get the hitNormal and hitMaterial
-            float3 v1 = triVertBuffer[3 * intersection.primitive_id + 0];
-            float3 v2 = triVertBuffer[3 * intersection.primitive_id + 1];
-            float3 v3 = triVertBuffer[3 * intersection.primitive_id + 2];
+            // Calculate hitPosition and hitNormal
+            hitPosition = r.origin + intersection.distance * r.direction;
             
-            float x = intersection.triangle_barycentric_coord.x;
-            float y = intersection.triangle_barycentric_coord.y;
-            float z = 1.0 - x - y;
             
-            float3 hitPosition = v2 * x + v3 * y + v1 * z;
-//            float3 hitPosition = r.origin + intersection.distance * r.direction;
-
-            if (length(hitNormal) == 0.0) {
+            if (intersection.type == intersection_type::triangle) {
+                float3 v1 = triVertBuffer[3 * intersection.primitive_id + 0];
+                float3 v2 = triVertBuffer[3 * intersection.primitive_id + 1];
+                float3 v3 = triVertBuffer[3 * intersection.primitive_id + 2];
+                
                 hitNormal = normalize(cross(v2 - v1, v3 - v1));
+                hitMaterial = triMaterialBuffer[intersection.primitive_id];
+            } else {
+                hitMaterial = sphereBuffer[intersection.primitive_id].material;
+                //TODO: Continue here
             }
             
-            Material hitMaterial = triMaterialBuffer[intersection.primitive_id];
+//            // DEBUG ONLY
+//            outputColor = hitNormal / 2 + float3(0.5, 0.5, 0.5);
+//            break;
+
+            
             
             // MARK: - NEE pathtracing contribution
             float3 Li = float3(0.0, 0.0, 0.0);

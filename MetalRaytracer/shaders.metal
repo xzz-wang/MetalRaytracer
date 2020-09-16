@@ -8,6 +8,7 @@
 
 #include <metal_stdlib>
 #include "ShaderTypes.h"
+#define EPSILON 0.0001
 using namespace metal;
 using namespace raytracing;
 
@@ -40,7 +41,9 @@ void convertToColorSpace(uint2 idx2 [[thread_position_in_grid]],
 
 struct BoundingBoxResult {
     bool accept [[accept_intersection]];
+    bool continueSearch [[continue_search]];
     float dist [[distance]];
+    
 };
 
 inline float3 float3From4(float4 vector) {
@@ -52,15 +55,16 @@ BoundingBoxResult sphereIntersectionFunction(float3 origin  [[origin]],
                                              float3 direction [[direction]],
                                              float minDistance [[min_distance]],
                                              float maxDistance [[max_distance]],
-                                             uint primitiveIndex [[primitive_id]],
+                                             uint primitive_id [[primitive_id]],
                                              device Sphere* sphereBuffer [[buffer(0)]],
                                              ray_data float3 & hitNormal [[payload]]) {
     
-    device Sphere & thisSphere = sphereBuffer[primitiveIndex];
-    float3 newOrigin = float3From4(thisSphere.inverseTransformation * float4(origin, 1.0));
-    float3 newDirection = float3From4(thisSphere.inverseTransformation * float4(direction, 1.0));
+    device Sphere & thisSphere = sphereBuffer[primitive_id];
+    float4x4 invMat = thisSphere.inverseTransformation;
+    float3 newOrigin = float3From4(invMat * float4(origin, 1.0));
+    float3 newDirection = float3From4(invMat * float4(direction, 0.0));
     
-    float radius = 0.5;
+    float radius = 1.0;
     float3 center = float3(0.0, 0.0, 0.0);
     
     float3 oc = newOrigin - center;
@@ -73,18 +77,60 @@ BoundingBoxResult sphereIntersectionFunction(float3 origin  [[origin]],
     BoundingBoxResult result;
     if (delta <= 0.0f) {
         result.accept = false;
-    } else {
-        // Calculating Actually hit position
-        float transformedDist = (-b - sqrt(delta)) / (2 * a);
-        float3 transformedHit = newOrigin + transformedDist * newDirection;
-        float3 hitPosition = float3From4(thisSphere.forwardTransformation * float4(transformedHit, 1.0));
-        result.dist = (hitPosition[0] - origin[0]) / direction[0];
-        
-        result.accept = result.dist >= minDistance && result.dist <= maxDistance;
+        result.continueSearch = true;
+        result.dist = 5.0;
+        return result;
     }
     
-    result.accept = true;
+//    hitNormal = origin;
+//    if (primitive_id == 0) {
+//        hitNormal += float3(0.5, 0.0, 0.0);
+//    } else if (primitive_id == 1) {
+//        hitNormal += float3(0.0, 0.5, 0.0);
+//    }
+//
+//    BoundingBoxResult debugResult = BoundingBoxResult();
+//    debugResult.accept = true;
+//    debugResult.continueSearch = true;
+//    debugResult.dist = delta;
+//    return debugResult;
     
+    delta = sqrt(delta);
+
+    // Calculating Actually hit position
+    float root1 = (- b + delta) / (2 * a);
+    float root2 = (- b - delta) / (2 * a);
+    
+    float smallestRoot;
+    if (root1 < root2) {
+        if (root1 >= minDistance && root1 < maxDistance) {
+            smallestRoot = root1;
+        } else if (root2 >= minDistance && root2 < maxDistance){
+            smallestRoot = root2;
+        } else {
+            result.accept = false;
+            return result;
+        }
+    } else {
+        if (root2 >= minDistance && root2 < maxDistance) {
+            smallestRoot = root2;
+        } else if (root1 >= minDistance && root1 < maxDistance){
+            smallestRoot = root1;
+        } else {
+            result.accept = false;
+            return result;
+        }
+    }
+    
+
+    
+    result.dist = smallestRoot;
+
+    float3 normal = newOrigin + newDirection * result.dist - center;
+    normal = float3From4(transpose(thisSphere.inverseTransformation) * float4(normal, 1.0));
+    hitNormal = normalize(normal);
+
+    result.accept = true;
     return result;
 }
 
