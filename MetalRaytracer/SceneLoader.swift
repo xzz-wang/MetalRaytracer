@@ -128,7 +128,12 @@ class SceneLoader {
             } else {
                 scene.neeOn = true;
             }
-            
+        } else if command == "rr" || command == "russianroulette" {
+            if args[1] == "off" || args[1] == "OFF" {
+                scene.rrOn = false;
+            } else {
+                scene.rrOn = true;
+            }
         // MARK: Part 2: Camera and Geometry
         } else if command == "camera" {
             cameraOrigin = loadVec3(args: args, startAt: 1)

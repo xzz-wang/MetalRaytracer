@@ -35,7 +35,8 @@ class Scene {
     public var outputName: String = "output.png"
     public var spp: Int = 1
     public var lightsamples: Int = 1
-    public var neeOn: Bool = true;
+    public var neeOn: Bool = false;
+    public var rrOn: Bool = false; // Russian Rullette
     
     public var camera: Camera?
     
@@ -125,6 +126,7 @@ class Scene {
         data.lightsamples = Int32(lightsamples)
         data.maxDepth = Int32(maxDepth)
         data.neeOn = neeOn ? 1 : 0
+        data.rrOn = rrOn ? 1 : 0
         data.spp = Int32(spp)
         return data
     }

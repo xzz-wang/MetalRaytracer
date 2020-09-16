@@ -294,6 +294,18 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
             float3 value = brdfObj.value(-r.direction, sample, hitNormal);
             throughput = throughput * value;
             
+            // Russian Roulette
+            float q = 0.0;
+            if (scene.rrOn == 1) {
+                q = 1.0 - min(max(throughput.x, max(throughput.y, throughput.z)), 1.0);
+                float x = loki.rand(); // to determine whether it should terminate here
+                if(x < q) {
+                    break;
+                } else {
+                    throughput = throughput * (1.0 / (1.0 - q));
+                }
+            }
+            
             r.direction = sample;
             r.origin = hitPosition;
             
