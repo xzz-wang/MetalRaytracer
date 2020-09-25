@@ -45,7 +45,7 @@ struct Quadlight {
 };
 
 
-struct SceneData {
+struct FrameData {
     struct Camera camera;
     simd_int2 imageSize;
     int quadLightCount;
@@ -55,7 +55,7 @@ struct SceneData {
     int neeOn; // A Boolean 1/0
     int rrOn;
     int maxDepth;
-    int spp;
+    int sampleIndex;
 };
 
 struct RGBData {

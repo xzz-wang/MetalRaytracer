@@ -116,8 +116,8 @@ class Scene {
 
     }
     
-    public func getSceneData() -> SceneData {
-        var data = SceneData()
+    public func getInitFrameData() -> FrameData {
+        var data = FrameData()
         data.camera = camera!
         data.imageSize = imageSize
         data.pointLightCount = Int32(pointLightsCount)
@@ -127,7 +127,7 @@ class Scene {
         data.maxDepth = Int32(maxDepth)
         data.neeOn = neeOn ? 1 : 0
         data.rrOn = rrOn ? 1 : 0
-        data.spp = Int32(spp)
+        data.sampleIndex = 0
         return data
     }
 }

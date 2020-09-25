@@ -26,11 +26,10 @@ inline RGBData float3ToRGB(float3 value) {
 
 [[kernel]]
 void convertToColorSpace(uint2 idx2 [[thread_position_in_grid]],
-                         constant SceneData & scene [[buffer(0)]],
+                         constant FrameData & scene [[buffer(0)]],
                          device float3 * shadingResult [[buffer(1)]],
                          device RGBData* imageData[[buffer(2)]]) {
     int index = idx2.x + scene.imageSize.x * idx2.y;
-//        float3 color = shadingResult[index] / (float)scene.spp;
     float3 color = shadingResult[index];
     imageData[index] = float3ToRGB(color);
 }
@@ -81,19 +80,6 @@ BoundingBoxResult sphereIntersectionFunction(float3 origin  [[origin]],
         result.dist = 5.0;
         return result;
     }
-    
-//    hitNormal = origin;
-//    if (primitive_id == 0) {
-//        hitNormal += float3(0.5, 0.0, 0.0);
-//    } else if (primitive_id == 1) {
-//        hitNormal += float3(0.0, 0.5, 0.0);
-//    }
-//
-//    BoundingBoxResult debugResult = BoundingBoxResult();
-//    debugResult.accept = true;
-//    debugResult.continueSearch = true;
-//    debugResult.dist = delta;
-//    return debugResult;
     
     delta = sqrt(delta);
 

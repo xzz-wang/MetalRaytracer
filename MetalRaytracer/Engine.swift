@@ -11,6 +11,7 @@ import simd
 import MetalPerformanceShaders
 
 class Engine {
+    
     private var scene: Scene!
     
     // Metal Objects
@@ -31,7 +32,7 @@ class Engine {
     private var instBUffer: MTLBuffer!
     
     // Read-only Buffers
-    private var sceneDataBuffer: MTLBuffer!
+    private var uniformBuffer: MTLBuffer!
     private var triMaterialBuffer: MTLBuffer!
     private var sphereBuffer: MTLBuffer!
     
@@ -42,6 +43,19 @@ class Engine {
     // Other buffers
     private var outputImageBuffer: MTLBuffer!
     private var renderResultBuffer: MTLBuffer!
+    
+    // For multiple sample at once
+    private let concurrentFrameCount = 3
+    private var semaphore: DispatchSemaphore
+    private var currentUniformIndex = -1
+    private var currentSampleIndex: Int32 = -1
+    private let uniformStride = MemoryLayout<FrameData>.stride
+    private var finishedSampleCount = 0
+
+    
+    init() {
+        semaphore = DispatchSemaphore(value: concurrentFrameCount)
+    }
     
     
     /**
@@ -159,9 +173,10 @@ class Engine {
         var failed = false
         
         // Initialize SceneData buffer
-        let data = [scene.getSceneData()]
-        if let buffer = metalDevice!.makeBuffer(bytes: data ,length: MemoryLayout<SceneData>.size, options: .storageModeShared) {
-            sceneDataBuffer = buffer
+        let initFrameData = scene.getInitFrameData()
+        let data = Array(repeating: initFrameData, count: concurrentFrameCount)
+        if let buffer = metalDevice!.makeBuffer(bytes: data ,length: MemoryLayout<FrameData>.size * concurrentFrameCount, options: .storageModeShared) {
+            uniformBuffer = buffer
         } else { failed = true }
         
         // Initialize Vertex Buffer
@@ -278,6 +293,23 @@ class Engine {
     
     
     
+    private func updateUniform() {
+        
+        semaphore.wait()
+        
+        currentSampleIndex += 1
+        currentUniformIndex = (currentUniformIndex + 1) % concurrentFrameCount
+        
+        let memoryOffset = currentUniformIndex * uniformStride
+        
+        var newUniform = uniformBuffer.contents().load(fromByteOffset: memoryOffset, as: FrameData.self)
+        newUniform.sampleIndex = currentSampleIndex
+        uniformBuffer.contents().storeBytes(of: newUniform, toByteOffset: memoryOffset, as: FrameData.self)
+        
+    }
+    
+    
+    
     // MARK: - Here's the main function. Everything starts here.
     /**
      The core of the rendering engine. Everything goes here.
@@ -299,8 +331,7 @@ class Engine {
             return
         }
         
-        print("Graphics card:\t\t \(metalDevice.name)")
-        
+        print("Graphics card:\t\t \(metalDevice.name)")        
 
         if !setupScene(path: sourcePath) { return }
         if !setupBuffers() { return }
@@ -312,30 +343,54 @@ class Engine {
         // Construct the acceleration structure
         if !setupAccelerationStructure() { return }
         
-        // Create the command buffer needed
+        
+        // Commit commands for each sample
+        var threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
+        var threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
+
+        for _ in 0..<scene.spp {
+            // Create the command buffer needed
+            guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+                print("Unable to generate command Buffer")
+                return
+            }
+            
+            updateUniform()
+            
+            // MARK: The main path-tracing kernel
+            let mainKernelEncoder = commandBuffer.makeComputeCommandEncoder()!
+            mainKernelEncoder.setComputePipelineState(pathtracingPipeline)
+            mainKernelEncoder.setBuffer(uniformBuffer, offset: currentUniformIndex * uniformStride, index: 0)
+            mainKernelEncoder.setAccelerationStructure(accelerationStructure, bufferIndex: 1)
+            mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, sphereBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, renderResultBuffer], offsets: Array(repeating: 0, count: 7), range: 2..<9)
+            mainKernelEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 9)
+            
+            
+            mainKernelEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
+            mainKernelEncoder.endEncoding()
+            
+            
+            commandBuffer.addCompletedHandler({cb in
+                self.semaphore.signal()
+                self.finishedSampleCount += 1
+                if (self.finishedSampleCount % 10 == 0) {
+                    print(self.finishedSampleCount)
+                }
+            })
+            
+            commandBuffer.commit()
+
+        }
+        
         guard let commandBuffer = commandQueue.makeCommandBuffer() else {
             print("Unable to generate command Buffer")
             return
         }
-        
-        // MARK: The main path-tracing kernel
-        let mainKernelEncoder = commandBuffer.makeComputeCommandEncoder()!
-        mainKernelEncoder.setComputePipelineState(pathtracingPipeline)
-        mainKernelEncoder.setBuffer(sceneDataBuffer, offset: 0, index: 0)
-        mainKernelEncoder.setAccelerationStructure(accelerationStructure, bufferIndex: 1)
-        mainKernelEncoder.setBuffers([triVertexBuffer, triMaterialBuffer, sphereBuffer, directionalLightBuffer, pointLightBuffer, quadLightBuffer, renderResultBuffer], offsets: Array(repeating: 0, count: 7), range: 2..<9)
-        mainKernelEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 9)
-        
-        
-        var threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
-        var threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
-        mainKernelEncoder.dispatchThreads(threadsPerGrid, threadsPerThreadgroup: threadsPerThreadgroup)
-        mainKernelEncoder.endEncoding()
-                        
+
         // MARK: Convert the output of the rendering
         let convertKernelEncoder = commandBuffer.makeComputeCommandEncoder()!
         convertKernelEncoder.setComputePipelineState(convertColorPipeline)
-        convertKernelEncoder.setBuffers([sceneDataBuffer, renderResultBuffer, outputImageBuffer], offsets: [0, 0, 0], range: 0..<3)
+        convertKernelEncoder.setBuffers([uniformBuffer, renderResultBuffer, outputImageBuffer], offsets: [0, 0, 0], range: 0..<3)
         
         threadsPerThreadgroup = MTLSize(width: 8, height: 8, depth: 1)
         threadsPerGrid = MTLSize(width: Int(scene.imageSize.x), height: Int(scene.imageSize.y), depth: 1)
@@ -343,7 +398,7 @@ class Engine {
         convertKernelEncoder.endEncoding()
         
         commandBuffer.commit()
-        print("Command Comitted")
+        print("All Command Comitted")
         
         commandBuffer.waitUntilCompleted()
         print("Command completed")

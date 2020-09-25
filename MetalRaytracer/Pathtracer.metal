@@ -26,10 +26,39 @@ struct BoundingBox{
     packed_float3 max;
 };
 
-inline ray generateInitRay(uint3 idx3, constant SceneData & scene, thread Loki &loki, bool center) {
+
+// This algorithm to generate halton sequence is copied from Apple's sample code for raytracing.
+constant unsigned int primes[] = {
+    2,   3,  5,  7,
+    11, 13, 17, 19,
+    23, 29, 31, 37,
+    41, 43, 47, 53,
+    59, 61, 67, 71,
+    73, 79, 83, 89
+};
+
+float halton(unsigned int i, unsigned int d) {
+    unsigned int b = primes[d];
+
+    float f = 1.0f;
+    float invB = 1.0f / b;
+
+    float r = 0;
+
+    while (i > 0) {
+        f = f * invB;
+        r = r + f * (i % b);
+        i = i / b;
+    }
+
+    return r;
+}
+
+
+inline ray generateInitRay(uint3 idx3, thread FrameData & scene, thread Loki &loki) {
     float deltaX, deltaY;
     
-    if (center) {
+    if (scene.sampleIndex == 0) {
         deltaX = 0.5;
         deltaY = 0.5;
     } else {
@@ -177,7 +206,7 @@ inline float3 sampleQuadLight(intersector<triangle_data, instancing> intersector
  */
 [[kernel]]
 void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
-                       constant SceneData & scene [[buffer(0)]],
+                       device FrameData * frameData [[buffer(0)]],
                        instance_acceleration_structure accelerationStructure [[buffer(1)]],
                         
                        device simd_float3 * triVertBuffer [[buffer(2)]],
@@ -192,126 +221,118 @@ void pathtracingKernel(uint3 idx3 [[thread_position_in_grid]],
                        intersection_function_table<triangle_data, instancing> functionTable[[buffer(9)]]) {
     
     // Initialization
+    FrameData scene = *frameData;
     int index = idx3.x + scene.imageSize.x * idx3.y;
     float3 outputColor = float3(0.0, 0.0, 0.0);
     intersector<triangle_data, instancing> intersector;
     
     // Loop through each sample per pixel
-    for (int i = 0; i < scene.spp; i++) {
-        Loki loki = Loki(idx3[0], idx3[1] + idx3[2], i);
-        ray r = generateInitRay(idx3, scene, loki, i==0);
-        
-        // Properties to be populated
-        float3 throughput = float3(1.0, 1.0, 1.0);
+    Loki loki = Loki(idx3[0], idx3[1] + idx3[2], scene.sampleIndex);
+    ray r = generateInitRay(idx3, scene, loki);
+    
+    // Properties to be populated
+    float3 throughput = float3(1.0, 1.0, 1.0);
 
-        // Loop according to depth
-        for (int depth = 0; depth != scene.maxDepth; depth++) {
+    // Loop according to depth
+    for (int depth = 0; depth != scene.maxDepth; depth++) {
+        
+        float3 hitPosition, hitNormal;
+        Material hitMaterial;
+        
+        // Find intersection
+        intersector.accept_any_intersection(false);
+        intersection_result<triangle_data, instancing> intersection;
+        intersection = intersector.intersect(r, accelerationStructure, functionTable, hitNormal);
+        
+        // stop if we did not hit anything
+        if (intersection.distance <= 0.0) {
+            break;
+        }
+        
+        // Calculate hitPosition and hitNormal
+        hitPosition = r.origin + intersection.distance * r.direction;
+        
+        
+        if (intersection.type == intersection_type::triangle) {
+            float3 v1 = triVertBuffer[3 * intersection.primitive_id + 0];
+            float3 v2 = triVertBuffer[3 * intersection.primitive_id + 1];
+            float3 v3 = triVertBuffer[3 * intersection.primitive_id + 2];
             
-            float3 hitPosition, hitNormal;
-            Material hitMaterial;
-            
-            // Find intersection
-            intersector.accept_any_intersection(false);
-            intersection_result<triangle_data, instancing> intersection;
-            intersection = intersector.intersect(r, accelerationStructure, functionTable, hitNormal);
-            
-            // stop if we did not hit anything
-            if (intersection.distance <= 0.0) {
+            hitNormal = normalize(cross(v2 - v1, v3 - v1));
+            hitMaterial = triMaterialBuffer[intersection.primitive_id];
+        } else {
+            hitMaterial = sphereBuffer[intersection.primitive_id].material;
+            //TODO: Continue here
+        }
+                
+        // MARK: - NEE pathtracing contribution
+        float3 Li = float3(0.0, 0.0, 0.0);
+        if (scene.neeOn == 1) {
+            // check if we have hit a light
+            if (hitMaterial.emission.x > 0 || hitMaterial.emission.y > 0 || hitMaterial.emission.z > 0) {
+                // Check if this is the first layer: include the light if this is the first layer
+                outputColor += depth == 0 ? throughput * hitMaterial.emission : 0.0;
                 break;
             }
+
+            // We did not hit a light, calculate the light contribution
+            intersector.accept_any_intersection(true); // Shadow ray mode
             
-            // Calculate hitPosition and hitNormal
-            hitPosition = r.origin + intersection.distance * r.direction;
-            
-            
-            if (intersection.type == intersection_type::triangle) {
-                float3 v1 = triVertBuffer[3 * intersection.primitive_id + 0];
-                float3 v2 = triVertBuffer[3 * intersection.primitive_id + 1];
-                float3 v3 = triVertBuffer[3 * intersection.primitive_id + 2];
-                
-                hitNormal = normalize(cross(v2 - v1, v3 - v1));
-                hitMaterial = triMaterialBuffer[intersection.primitive_id];
-            } else {
-                hitMaterial = sphereBuffer[intersection.primitive_id].material;
-                //TODO: Continue here
+            // Direct Light
+            for (int i = 0; i < scene.directLightCount; i++) {
+                DirectionalLight thisLight = directionalLights[i];
+                float3 lightPos = hitPosition + MAXFLOAT * thisLight.toDirection;
+                outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, lightPos, intersector, accelerationStructure, functionTable);
             }
-            
-//            // DEBUG ONLY
-//            outputColor = hitNormal / 2 + float3(0.5, 0.5, 0.5);
-//            break;
 
-            
-            
-            // MARK: - NEE pathtracing contribution
-            float3 Li = float3(0.0, 0.0, 0.0);
-            if (scene.neeOn == 1) {
-                // check if we have hit a light
-                if (hitMaterial.emission.x > 0 || hitMaterial.emission.y > 0 || hitMaterial.emission.z > 0) {
-                    // Check if this is the first layer: include the light if this is the first layer
-                    outputColor += depth == 0 ? throughput * hitMaterial.emission : 0.0;
-                    break;
-                }
-
-                // We did not hit a light, calculate the light contribution
-                intersector.accept_any_intersection(true); // Shadow ray mode
-                
-                // Direct Light
-                for (int i = 0; i < scene.directLightCount; i++) {
-                    DirectionalLight thisLight = directionalLights[i];
-                    float3 lightPos = hitPosition + MAXFLOAT * thisLight.toDirection;
-                    outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, lightPos, intersector, accelerationStructure, functionTable);
-                }
-
-                // Point Light
-                for (int i = 0; i < scene.pointLightCount; i++) {
-                    PointLight thisLight = pointLights[i];
-                    outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, thisLight.position, intersector, accelerationStructure, functionTable);
-                }
-
-                // Quadlight: Loop through each light
-                for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
-                    Li += sampleQuadLight(intersector, accelerationStructure, functionTable, quadLights[lightID], hitPosition, hitMaterial, hitNormal, -r.direction, scene.lightsamples, loki);
-                } // End of quadLight Loop
-                
-            } else {
-                if (hitMaterial.emission.x > 0 || hitMaterial.emission.y > 0 || hitMaterial.emission.z > 0) {
-                    outputColor += throughput * hitMaterial.emission;
-                    break;
-                }
-            } // End of NEE if
-            
-            outputColor += throughput * Li;
-            
-            // MARK: - Generate next ray
-            Phong_Importance_BRDF brdfObj = Phong_Importance_BRDF(hitMaterial, &loki);
-            float3 sample = brdfObj.sample(hitNormal, -r.direction);
-            
-            if (sample.x == -1.0 && sample.y == -1.0 && sample.z == -1.0) {
-                break; // Reject the sample
-            } 
-                        
-            // MARK: Calculate BRDF value
-            float3 value = brdfObj.value(-r.direction, sample, hitNormal);
-            throughput = throughput * value;
-            
-            // Russian Roulette
-            float q = 0.0;
-            if (scene.rrOn == 1) {
-                q = 1.0 - min(max(throughput.x, max(throughput.y, throughput.z)), 1.0);
-                float x = loki.rand(); // to determine whether it should terminate here
-                if(x < q) {
-                    break;
-                } else {
-                    throughput = throughput * (1.0 / (1.0 - q));
-                }
+            // Point Light
+            for (int i = 0; i < scene.pointLightCount; i++) {
+                PointLight thisLight = pointLights[i];
+                outputColor += thisLight.brightness * computeShading(hitMaterial, -r.direction, hitNormal, hitPosition, thisLight.position, intersector, accelerationStructure, functionTable);
             }
+
+            // Quadlight: Loop through each light
+            for (int lightID = 0; lightID < scene.quadLightCount; lightID++) {
+                Li += sampleQuadLight(intersector, accelerationStructure, functionTable, quadLights[lightID], hitPosition, hitMaterial, hitNormal, -r.direction, scene.lightsamples, loki);
+            } // End of quadLight Loop
             
-            r.direction = sample;
-            r.origin = hitPosition;
-            
-        }// End of depth loop
+        } else {
+            if (hitMaterial.emission.x > 0 || hitMaterial.emission.y > 0 || hitMaterial.emission.z > 0) {
+                outputColor += throughput * hitMaterial.emission;
+                break;
+            }
+        } // End of NEE if
         
-    } // End of sample loop
-    
-    outputBuffer[index] += outputColor   / (float)scene.spp;
+        outputColor += throughput * Li;
+        
+        // MARK: - Generate next ray
+        Phong_Importance_BRDF brdfObj = Phong_Importance_BRDF(hitMaterial, &loki);
+        float3 sample = brdfObj.sample(hitNormal, -r.direction);
+        
+        if (sample.x == -1.0 && sample.y == -1.0 && sample.z == -1.0) {
+            break; // Reject the sample
+        }
+                    
+        // MARK: Calculate BRDF value
+        float3 value = brdfObj.value(-r.direction, sample, hitNormal);
+        throughput = throughput * value;
+        
+        // Russian Roulette
+        float q = 0.0;
+        if (scene.rrOn == 1) {
+            q = 1.0 - min(max(throughput.x, max(throughput.y, throughput.z)), 1.0);
+            float x = loki.rand(); // to determine whether it should terminate here
+            if(x < q) {
+                break;
+            } else {
+                throughput = throughput * (1.0 / (1.0 - q));
+            }
+        }
+        
+        r.direction = sample;
+        r.origin = hitPosition;
+        
+    }// End of depth loop
+        
+    outputBuffer[index] = (outputColor + scene.sampleIndex * outputBuffer[index]) / (scene.sampleIndex + 1);
 }
