@@ -1,7 +1,7 @@
 # MetalRaytracer
 An offline raytracer built on Metal frameworks.
 
-This project was built on MacOS 12.0 Big Sur. Earlier versions of MacOS are not supported.
+This project was built on MacOS 11.0 Big Sur. Earlier versions of MacOS are not supported.
 
 ### Previous Work
 This project is my CSE 168's course project on a new platform. Details regarding my class project can be found here: [CSE 168 Final Project](https://bit.ly/2ZIKlvv)
