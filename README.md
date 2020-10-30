@@ -1,4 +1,6 @@
 # MetalRaytracer
+![Cornell Box](/cornell.png)
+
 An offline raytracer built on Metal frameworks.
 
 This project was built on MacOS 11.0 Big Sur. Earlier versions of MacOS are not supported.
