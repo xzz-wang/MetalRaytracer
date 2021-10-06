@@ -21,6 +21,7 @@
 		B0D102A024DA80D200D70CAF /* loki.metal in Sources */ = {isa = PBXBuildFile; fileRef = B0D1029E24DA80D200D70CAF /* loki.metal */; };
 		B0D102A124DA80D200D70CAF /* loki_header.metal in Sources */ = {isa = PBXBuildFile; fileRef = B0D1029F24DA80D200D70CAF /* loki_header.metal */; };
 		B0E5566324A5C76E00030471 /* Film.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E5566224A5C76E00030471 /* Film.swift */; };
+		C0FCFCDC270D485F0027C28D /* MetalRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FCFCDB270D485F0027C28D /* MetalRenderer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -106,6 +107,7 @@
 		B0DCCB692511ED8E00CC1694 /* scene4-emission.test */ = {isa = PBXFileReference; lastKnownFileType = text; path = "scene4-emission.test"; sourceTree = "<group>"; };
 		B0E5566224A5C76E00030471 /* Film.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Film.swift; sourceTree = "<group>"; };
 		B0FF8A8024CF487A005B70DE /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
+		C0FCFCDB270D485F0027C28D /* MetalRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalRenderer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -258,8 +260,9 @@
 		B06DF87E249EC29300BD8145 /* MetalRaytracer */ = {
 			isa = PBXGroup;
 			children = (
-				B0D1029D24DA80D200D70CAF /* Loki */,
 				B06DF87F249EC29300BD8145 /* main.swift */,
+				C0FCFCDB270D485F0027C28D /* MetalRenderer.swift */,
+				B0D1029D24DA80D200D70CAF /* Loki */,
 				B07ADD0E24AAD130005BCD16 /* Engine.swift */,
 				B008D1D024B6DF4B00D4C67E /* Scene.swift */,
 				B0BBC5E224B18578002B2EBD /* SceneLoader.swift */,
@@ -350,6 +353,7 @@
 				B06CD10A24C178EB00E155B0 /* Pathtracer.metal in Sources */,
 				B0BBC5E324B18578002B2EBD /* SceneLoader.swift in Sources */,
 				B0D102A024DA80D200D70CAF /* loki.metal in Sources */,
+				C0FCFCDC270D485F0027C28D /* MetalRenderer.swift in Sources */,
 				B06DF880249EC29300BD8145 /* main.swift in Sources */,
 				B0D102A124DA80D200D70CAF /* loki_header.metal in Sources */,
 				B06BDFC024FACB3D002E5A1D /* BRDFs.metal in Sources */,
